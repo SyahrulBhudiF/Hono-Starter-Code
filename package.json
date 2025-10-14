@@ -1,32 +1,39 @@
 {
-  "name": "Hono-Starter-Code",
-  "scripts": {
-    "dev": "bun run --hot src/index.ts",
-    "seed": "bun run src/config/db/seed.ts",
-    "migrate": "bunx drizzle-kit generate && bunx drizzle-kit migrate",
-    "worker": "bun run src/worker.ts"
-  },
-  "dependencies": {
-    "@faker-js/faker": "^9.4.0",
-    "@hono/oauth-providers": "^0.6.2",
-    "@hono/swagger-ui": "^0.5.0",
-    "@hono/zod-openapi": "^0.18.3",
-    "@types/nodemailer": "^6.4.17",
-    "bull": "^4.16.5",
-    "dotenv": "^16.4.7",
-    "drizzle-orm": "^0.39.0",
-    "drizzle-seed": "^0.3.0",
-    "hono": "^4.6.14",
-    "ioredis": "^5.4.2",
-    "nodemailer": "^6.10.0",
-    "pg": "^8.13.1",
-    "winston": "^3.17.0",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/pg": "^8.11.11",
-    "drizzle-kit": "^0.30.3",
-    "tsx": "^4.19.2"
-  }
+	"name": "Hono-Starter-Code",
+	"scripts": {
+		"dev": "bun run --hot src/index.ts",
+		"seed": "bun run src/config/db/seed.ts",
+		"migrate": "bunx drizzle-kit generate && bunx drizzle-kit migrate",
+		"worker": "bun run src/worker.ts",
+		"lint": "bunx biome lint .",
+		"lint:fix": "bunx biome lint --write .",
+		"format": "bunx biome format .",
+		"format:fix": "bunx biome format --write .",
+		"check": "bunx biome check .",
+		"check:fix": "bunx biome check --write ."
+	},
+	"dependencies": {
+		"@faker-js/faker": "^9.9.0",
+		"@hono/oauth-providers": "^0.6.2",
+		"@hono/swagger-ui": "^0.5.2",
+		"@hono/zod-openapi": "^0.18.4",
+		"@types/nodemailer": "^6.4.20",
+		"bull": "^4.16.5",
+		"dotenv": "^16.6.1",
+		"drizzle-orm": "^0.39.3",
+		"drizzle-seed": "^0.3.1",
+		"hono": "^4.9.12",
+		"ioredis": "^5.8.1",
+		"nodemailer": "^6.10.1",
+		"pg": "^8.16.3",
+		"winston": "^3.18.3",
+		"zod": "^3.25.76"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.2.6",
+		"@types/bun": "latest",
+		"@types/pg": "^8.15.5",
+		"drizzle-kit": "^0.30.6",
+		"tsx": "^4.20.6"
+	}
 }
