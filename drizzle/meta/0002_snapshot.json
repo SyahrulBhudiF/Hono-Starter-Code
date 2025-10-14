@@ -1,125 +1,118 @@
 {
-  "id": "cef59058-040d-4013-a44e-68e92608c9b2",
-  "prevId": "92e8f7d7-5e49-4942-b524-a611db29d416",
-  "version": "7",
-  "dialect": "postgresql",
-  "tables": {
-    "public.users": {
-      "name": "users",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuid_generate_v4\n    ()"
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "email": {
-          "name": "email",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "password": {
-          "name": "password",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
-        },
-        "role": {
-          "name": "role",
-          "type": "role",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'USER'"
-        },
-        "emailVerified": {
-          "name": "emailVerified",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
-        },
-        "loginAt": {
-          "name": "loginAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now\n    ()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now\n    ()"
-        },
-        "deletedAt": {
-          "name": "deletedAt",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "NULL"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "users_id_unique": {
-          "name": "users_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "id"
-          ]
-        },
-        "users_email_unique": {
-          "name": "users_email_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    }
-  },
-  "enums": {
-    "public.role": {
-      "name": "role",
-      "schema": "public",
-      "values": [
-        "USER",
-        "ADMIN"
-      ]
-    }
-  },
-  "schemas": {},
-  "sequences": {},
-  "roles": {},
-  "policies": {},
-  "views": {},
-  "_meta": {
-    "columns": {},
-    "schemas": {},
-    "tables": {}
-  }
+	"id": "cef59058-040d-4013-a44e-68e92608c9b2",
+	"prevId": "92e8f7d7-5e49-4942-b524-a611db29d416",
+	"version": "7",
+	"dialect": "postgresql",
+	"tables": {
+		"public.users": {
+			"name": "users",
+			"schema": "",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "uuid",
+					"primaryKey": true,
+					"notNull": true,
+					"default": "uuid_generate_v4\n    ()"
+				},
+				"name": {
+					"name": "name",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"email": {
+					"name": "email",
+					"type": "varchar(100)",
+					"primaryKey": false,
+					"notNull": true
+				},
+				"password": {
+					"name": "password",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "NULL"
+				},
+				"role": {
+					"name": "role",
+					"type": "role",
+					"typeSchema": "public",
+					"primaryKey": false,
+					"notNull": true,
+					"default": "'USER'"
+				},
+				"emailVerified": {
+					"name": "emailVerified",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "NULL"
+				},
+				"loginAt": {
+					"name": "loginAt",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "NULL"
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "now\n    ()"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "now\n    ()"
+				},
+				"deletedAt": {
+					"name": "deletedAt",
+					"type": "date",
+					"primaryKey": false,
+					"notNull": false,
+					"default": "NULL"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {
+				"users_id_unique": {
+					"name": "users_id_unique",
+					"nullsNotDistinct": false,
+					"columns": ["id"]
+				},
+				"users_email_unique": {
+					"name": "users_email_unique",
+					"nullsNotDistinct": false,
+					"columns": ["email"]
+				}
+			},
+			"policies": {},
+			"checkConstraints": {},
+			"isRLSEnabled": false
+		}
+	},
+	"enums": {
+		"public.role": {
+			"name": "role",
+			"schema": "public",
+			"values": ["USER", "ADMIN"]
+		}
+	},
+	"schemas": {},
+	"sequences": {},
+	"roles": {},
+	"policies": {},
+	"views": {},
+	"_meta": {
+		"columns": {},
+		"schemas": {},
+		"tables": {}
+	}
 }
