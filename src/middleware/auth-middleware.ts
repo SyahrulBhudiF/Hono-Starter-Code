@@ -50,10 +50,7 @@ export const authMiddleware = (
 		}
 
 		c.set("user", user);
-		(c.set as (key: keyof ApplicationVariables, value: unknown) => void)(
-			"token",
-			token,
-		);
+		c.set("token", token as any);
 
 		await next();
 	};
