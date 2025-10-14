@@ -133,8 +133,8 @@ export class Repository<TEntity extends Record<string, any>> {
 	async count(where?: SQLWrapper): Promise<number> {
 		const result = await this.db
 			.select({
-				count: sql<number>`count
-                    (*)`,
+				count: sql<number>`count(*)`,
+			})
 			})
 			.from(this.table)
 			.where(where || undefined);
