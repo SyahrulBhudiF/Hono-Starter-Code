@@ -1,21 +1,21 @@
+import { password } from "bun";
+import { HTTPException } from "hono/http-exception";
+import type { User } from "../config/db/schema";
+import { logger } from "../config/logging";
 import {
 	type ChangePasswordRequest,
 	toUserResponse,
 	type UpdateUserRequest,
-	UserRepository,
 	type UserResponse,
 } from "../model/user-model";
-import type { User } from "../config/db/schema";
-import { logger } from "../config/logging";
-import { HTTPException } from "hono/http-exception";
-import { password } from "bun";
+import { userRepository } from "../repository/user-repository";
 
 export class UserService {
 	static async update(
 		request: UpdateUserRequest,
 		user: User,
 	): Promise<UserResponse> {
-		const response = await UserRepository.update(user.id, "id", request);
+		const response = await userRepository.updateById(user.id, request);
 
 		logger.info("User updated successfully");
 
@@ -26,9 +26,9 @@ export class UserService {
 		request: ChangePasswordRequest,
 		user: User,
 	): Promise<void> {
-		const [existingUser] = await UserRepository.findByColumn("id", user.id);
+		const existingUser = await userRepository.findById(user.id);
 
-		if (existingUser.password && request.oldPassword) {
+		if (existingUser?.password && request.oldPassword) {
 			const isOldPasswordValid = await password.verify(
 				request.oldPassword,
 				existingUser.password,
@@ -54,10 +54,8 @@ export class UserService {
 
 		const newPassword = await password.hash(request.newPassword, "bcrypt");
 
-		await UserRepository.update(user.id, "id", { password: newPassword });
+		await userRepository.updateById(user.id, { password: newPassword });
 
 		logger.info("Password updated successfully");
-
-		return;
 	}
 }

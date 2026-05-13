@@ -1,129 +1,128 @@
-import { createRouteUtil } from "../util/route-util";
-import { z } from "zod";
+import { createRoute, z } from "@hono/zod-openapi";
+import { createResponses, jsonBody } from "../util/route-util";
 import { AuthValidation } from "../validation/auth-validation";
 
-export const registerRoute = createRouteUtil({
+const authResponse = z.object({
+	status: z.string(),
+	message: z.string(),
+	data: z.object({
+		email: z.email(),
+		name: z.string(),
+		role: z.string(),
+		accessToken: z.string().optional(),
+		refreshToken: z.string().optional(),
+	}),
+});
+
+export const registerRoute = createRoute({
 	method: "post",
 	path: "/register",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.object({
-			email: z.string(),
-			name: z.string(),
-		}),
-	}),
-	requestSchema: AuthValidation.REGISTER,
+	request: jsonBody(AuthValidation.REGISTER),
+	responses: createResponses(authResponse),
 	description: "Register a new user",
 });
 
-export const sendOTPRoute = createRouteUtil({
+export const sendOTPRoute = createRoute({
 	method: "post",
 	path: "/send-otp",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.null(),
-	}),
-	requestSchema: AuthValidation.SEND_OTP,
+	request: jsonBody(AuthValidation.SEND_OTP),
+	responses: createResponses(
+		z.object({
+			status: z.string(),
+			message: z.string(),
+			data: z.null(),
+		}),
+	),
 	description: "Send OTP to the user",
 });
 
-export const verifyOTPRoute = createRouteUtil({
+export const verifyOTPRoute = createRoute({
 	method: "post",
 	path: "/verify-otp",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.null(),
-	}),
-	requestSchema: AuthValidation.VERIFY_OTP,
+	request: jsonBody(AuthValidation.VERIFY_OTP),
+	responses: createResponses(
+		z.object({
+			status: z.string(),
+			message: z.string(),
+			data: z.null(),
+		}),
+	),
 	description: "Verify OTP of the user",
 });
 
-export const loginRoute = createRouteUtil({
+export const loginRoute = createRoute({
 	method: "post",
 	path: "/login",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.object({
-			email: z.string().email(),
-			name: z.string(),
-			role: z.string(),
-			accessToken: z.string(),
-			refreshToken: z.string(),
-		}),
-	}),
-	requestSchema: AuthValidation.LOGIN,
+	request: jsonBody(AuthValidation.LOGIN),
+	responses: createResponses(authResponse.required()),
 	description: "Login to the application",
 });
 
-export const logoutRoute = createRouteUtil({
+export const logoutRoute = createRoute({
 	method: "post",
 	path: "/logout",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.null(),
-	}),
-	requestSchema: z.object({
-		refreshToken: z.string(),
-	}),
+	request: jsonBody(
+		z.object({
+			refreshToken: z.string(),
+		}),
+	),
+	responses: createResponses(
+		z.object({
+			status: z.string(),
+			message: z.string(),
+			data: z.null(),
+		}),
+	),
 	security: [{ BearerAuth: [] }],
 	description: "Logout from the application",
 });
 
-export const resetPasswordRoute = createRouteUtil({
+export const resetPasswordRoute = createRoute({
 	method: "post",
 	path: "/reset-password",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.null(),
-	}),
-	requestSchema: AuthValidation.RESET_PASSWORD,
+	request: jsonBody(AuthValidation.RESET_PASSWORD),
+	responses: createResponses(
+		z.object({
+			status: z.string(),
+			message: z.string(),
+			data: z.null(),
+		}),
+	),
 	description: "Reset password of the user",
 });
 
-export const googleLoginRoute = createRouteUtil({
+export const googleLoginRoute = createRoute({
 	method: "get",
 	path: "/google",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.object({
-			email: z.string().email(),
-			name: z.string(),
-			role: z.string(),
-			accessToken: z.string(),
-			refreshToken: z.string(),
-		}),
-	}),
+	responses: createResponses(authResponse.required()),
 	description: "Login with google",
 });
 
-export const refreshTokenRoute = createRouteUtil({
+export const refreshTokenRoute = createRoute({
 	method: "post",
 	path: "/refresh-token",
 	tags: ["Auth"],
-	responseSchema: z.object({
-		status: z.string(),
-		message: z.string(),
-		data: z.object({
-			accessToken: z.string(),
+	request: jsonBody(
+		z.object({
 			refreshToken: z.string(),
 		}),
-	}),
-	requestSchema: z.object({
-		refreshToken: z.string(),
-	}),
+	),
+	responses: createResponses(
+		z.object({
+			status: z.string(),
+			message: z.string(),
+			data: z.object({
+				accessToken: z.string(),
+				refreshToken: z.string(),
+			}),
+		}),
+	),
 	description: "Refresh token",
 });

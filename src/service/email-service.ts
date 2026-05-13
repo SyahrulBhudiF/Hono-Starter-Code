@@ -1,17 +1,16 @@
-import { OtpService } from "./otp-service";
 import { logger } from "../config/logging";
 import { emailQueue } from "../config/queue";
-import { HTTPException } from "hono/http-exception";
-import { UserRepository } from "../model/user-model";
+import { userRepository } from "../repository/user-repository";
+import { OtpService } from "./otp-service";
 
 export class EmailService {
 	static async sendOTP(email: string): Promise<void> {
-		const user = await UserRepository.findByColumn("email", email);
+		const user = await userRepository.findByEmail(email);
 
-		if (!user)
-			throw new HTTPException(404, {
-				message: "User not found",
-			});
+		if (!user) {
+			logger.info(`OTP skipped for unknown email ${email}`);
+			return;
+		}
 
 		const otp = await OtpService.generateAndStoreOTP(email);
 

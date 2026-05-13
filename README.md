@@ -1,119 +1,155 @@
-# 🚀 Hono RestAPI Starter Kit
+# Hono Starter Code
 
-A modern, production-ready API starter kit built with cutting-edge technologies for rapid development and scalable
-performance.
+REST API starter built with Hono 4, Bun, PostgreSQL, Drizzle ORM, Redis, Zod OpenAPI, Swagger UI, and Scalar API Reference.
 
-## ✨ Features
+## Features
 
-- **🔥 [Hono](https://hono.dev/)** - Ultra-fast web framework for the edge
-- **🔐 Authentication & Authorization**
-    - JWT token-based authentication
-    - OAuth2 integration (Google)
-    - Email OTP verification
-- **📊 Database Integration**
-    - [Drizzle ORM](https://orm.drizzle.team/) - Type-safe SQL query builder
-    - PostgreSQL - Reliable, open-source relational database
-- **🗄️ Caching**
-    - Redis for high-performance caching and session management
-- **🐳 DevOps Ready**
-    - Docker & Docker Compose for containerization
-- **📝 API Documentation**
-    - Auto-generated OpenAPI documentation
-    - Interactive SwaggerUI interface
+- Hono 4 HTTP API
+- Bun runtime and test runner
+- JWT authentication
+- Google OAuth2 login
+- Email OTP verification with Bull + Redis
+- PostgreSQL database
+- Drizzle ORM schema, migrations, and concrete repositories
+- Redis cache/session support
+- Zod v4 request validation
+- OpenAPI 3.1 docs
+- Swagger UI and Scalar API Reference
+- Docker Compose development environment
+- Biome lint/format/check
+- Unit and integration tests
 
-## 🛠️ Tech Stack
+## Requirements
 
-| Category             | Technologies                                         |
-|----------------------|------------------------------------------------------|
-| **Framework**        | [Hono](https://hono.dev/)                            |
-| **Authentication**   | JWT, OAuth2, Email OTP                               |
-| **Database**         | PostgreSQL, [Drizzle ORM](https://orm.drizzle.team/) |
-| **Caching**          | Redis                                                |
-| **Containerization** | Docker                                               |
-| **Package Manager**  | [Bun](https://bun.sh/)                               |
-| **Documentation**    | OpenAPI, SwaggerUI                                   |
+- Bun 1.3+
+- Docker
+- Docker Compose
 
-## 🚀 Getting Started
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) (1.0.0 or later)
-- [Docker](https://www.docker.com/) & [Docker Compose](https://docs.docker.com/compose/)
-
-### Installation
-
-1. Clone the repository
-   ```bash
-   git clone https://github.com/SyahrulBhudiF/Hono-Starter-Code
-   cd Hono-Starter-Code
-   ```
-
-2. Install dependencies
-   ```bash
-   bun install
-   ```
-
-3. Set up environment variables
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-## 🏃‍♂️ Running the Application
-
-### Development Mode
-
-Start the application and all required services (PostgreSQL, Redis) using Docker:
+## Setup
 
 ```bash
-docker compose build
-docker compose up
+git clone https://github.com/SyahrulBhudiF/Hono-Starter-Code
+cd Hono-Starter-Code
+bun install
+cp .env.example .env
 ```
 
-This will launch the development environment with hot reloading enabled.
+Edit `.env` before running the app.
 
-### Production Mode
+For local non-Docker development, use local service hosts:
 
-For production deployment, use the same Docker Compose setup with minor configuration adjustments at Dockerfile and
-docker-compose.yml.
+```env
+DATABASE_URL=postgresql://user123:user123@localhost:5432/hono_starter
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+For Docker Compose, use service hosts:
+
+```env
+DATABASE_URL=postgresql://user123:user123@db:5432/hono_starter
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+## Development
+
+Start all services with Docker Compose:
 
 ```bash
-# Run in production mode
-docker compose build --no-cache
-docker compose up
+docker compose up --build
 ```
 
-## 📖 API Documentation
+Run app directly with hot reload:
 
-Once the application is running, you can access the API documentation at:
-
-- **OpenAPI Documentation**: [http://localhost:3000/doc](http://localhost:3000/doc)
-- **Swagger UI**: [http://localhost:3000/ui](http://localhost:3000/ui)
-
-## 📁 Project Structure
-
-```
-📦 ROOT
-├── 📂 drizzle/             # 🔄 Drizzle ORM migration
-├── 📂 src/
-│   ├── 📂 config/          # ⚙️ Configuration files
-│   ├── 📂 controllers/     # 🎮 Request handlers
-│   ├── 📂 middleware/      # 🔌 Custom middleware
-│   ├── 📂 models/          # 📊 Database models
-│   ├── 📂 routes/          # 🛣️ API routes and Swagger documentation
-│   ├── 📂 services/        # 🧩 Business logic
-│   ├── 📂 types/           # 📝 Type definitions and Repository abstraction
-│   ├── 📂 utils/           # 🔧 Utility functions
-│   ├── 📂 validation/      # ✅ Request validation schemas
-│   ├── 📄 index.ts         # 🚀 App entry point
-│   └── 📄 worker.ts        # 👷 Worker entry point
-├── 📄 .env.example         # 🔐 Environment variables example
-├── 📄 compose.yml          # 🐳 Docker Compose configuration
-├── 📄 Dockerfile           # 📦 Docker configuration
-├── 📄 drizzle.config.ts    # 🗃️ Drizzle ORM configuration
-└── 📄 package.json         # 📋 Dependencies and scripts
+```bash
+bun run dev
 ```
 
-## 🤝 Contributing
+Run worker:
 
-Contributions, issues, and feature requests are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for more information.
+```bash
+bun run worker
+```
+
+## Database
+
+Generate and run migrations:
+
+```bash
+bun run migrate
+```
+
+Seed database:
+
+```bash
+bun run seed
+```
+
+## Tests
+
+```bash
+bun test
+bun run test:unit
+bun run test:integration
+```
+
+Integration tests use `app.request()` and do not require a running server.
+
+## Code quality
+
+```bash
+bun run lint
+bun run format
+bun run check
+```
+
+Auto-fix:
+
+```bash
+bun run lint:fix
+bun run format:fix
+bun run check:fix
+```
+
+Type check:
+
+```bash
+bunx tsc --noEmit
+```
+
+## API docs
+
+When the app is running:
+
+- OpenAPI JSON: http://localhost:3000/doc
+- Swagger UI: http://localhost:3000/ui
+- Scalar API Reference: http://localhost:3000/scalar
+
+## Project structure
+
+```text
+drizzle/             Drizzle migrations
+src/
+  app.ts             Hono app factory and docs routes
+  index.ts           app entry point
+  config/            database, redis, queue, mail, logging config
+  controller/        request handlers
+  middleware/        Hono middleware
+  model/             request/response models and mappers
+  repository/        concrete Drizzle repositories
+  route/             route definitions and OpenAPI schemas
+  service/           business logic
+  types/             shared types and deprecated migration references
+  util/              utilities
+  validation/        Zod request schemas
+  worker.ts          worker entry point
+test/
+  integration/       app.request() tests
+  unit/              unit tests
+.env.example         environment example
+compose.yaml         Docker Compose config
+Dockerfile           container build
+drizzle.config.ts    Drizzle config
+package.json         scripts and dependencies
+```

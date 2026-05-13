@@ -1,41 +1,39 @@
+import type { GoogleUser } from "@hono/oauth-providers/google";
+import { password } from "bun";
+import { HTTPException } from "hono/http-exception";
+import { verify } from "hono/jwt";
+import { logger } from "../config/logging";
+import redis from "../config/redis";
 import {
 	type LoginUserRequest,
 	type RegisterUserRequest,
 	type ResetPasswordRequest,
 	type TokenResponse,
 	toUserResponse,
-	UserRepository,
 	type UserResponse,
 } from "../model/user-model";
-import { eq } from "drizzle-orm";
-import { usersTable } from "../config/db/schema";
-import { HTTPException } from "hono/http-exception";
-import { password } from "bun";
-import { logger } from "../config/logging";
+import { userRepository } from "../repository/user-repository";
 import { generateAccessToken, generateRefreshToken } from "../util/jwt-util";
-import redis from "../config/redis";
-import { verify } from "hono/jwt";
 import { requireEnv } from "../util/util";
-import type { GoogleUser } from "@hono/oauth-providers/google";
 
 export class AuthService {
 	static async register(request: RegisterUserRequest): Promise<UserResponse> {
-		const existingUser = await UserRepository.count(
-			eq(usersTable.email, request.email),
-		);
+		const hashedPassword = await password.hash(request.password, {
+			algorithm: "bcrypt",
+			cost: 10,
+		});
 
-		if (existingUser > 0) {
+		const existingUser = await userRepository.findByEmail(request.email);
+		if (existingUser) {
 			throw new HTTPException(400, {
 				message: "Email already taken",
 			});
 		}
 
-		request.password = await password.hash(request.password, {
-			algorithm: "bcrypt",
-			cost: 10,
+		const user = await userRepository.create({
+			...request,
+			password: hashedPassword,
 		});
-
-		const user = await UserRepository.create(request);
 
 		logger.info("User registered successfully");
 
@@ -43,9 +41,9 @@ export class AuthService {
 	}
 
 	static async login(request: LoginUserRequest): Promise<UserResponse> {
-		const [user] = await UserRepository.findByColumn("email", request.email);
+		const user = await userRepository.findByEmail(request.email);
 
-		if (!user || !user.password) {
+		if (!user?.password) {
 			throw new HTTPException(401, {
 				message: "Email or Password incorrect",
 			});
@@ -79,7 +77,7 @@ export class AuthService {
 		response.refreshToken = refresh;
 
 		const loginAt = new Date();
-		await UserRepository.update(user.id, "id", { loginAt });
+		await userRepository.updateById(user.id, { loginAt });
 
 		logger.info("User logged in successfully");
 
@@ -91,12 +89,10 @@ export class AuthService {
 		refreshToken: string,
 		userId: string,
 	): Promise<void> {
-		await redis.set(`blacklist:${token}`, "true");
-		await redis.del(`user:${token}`);
-
 		const jwtPayload = await verify(
 			token,
-			requireEnv("JWT_REFRESH_SECRET") as string,
+			requireEnv("JWT_ACCESS_SECRET"),
+			"HS256",
 		);
 		if (jwtPayload.id !== userId) {
 			throw new HTTPException(401, {
@@ -104,11 +100,11 @@ export class AuthService {
 			});
 		}
 
+		await redis.set(`blacklist:${token}`, "true");
+		await redis.del(`user:${userId}`);
 		await redis.set(`blacklist:${refreshToken}`, "true");
 
 		logger.info("User logged out successfully");
-
-		return;
 	}
 
 	static async resetPassword(
@@ -128,7 +124,7 @@ export class AuthService {
 			cost: 10,
 		});
 
-		const user = await UserRepository.update(request.email, "email", {
+		const user = await userRepository.updateByEmail(request.email, {
 			password: pw,
 		});
 
@@ -140,13 +136,22 @@ export class AuthService {
 	static async googleLogin(
 		request: Partial<GoogleUser>,
 	): Promise<UserResponse> {
-		return await UserRepository.transaction(async (repo) => {
-			let [user] = await repo.findByColumn("email", request.email);
+		if (!request.email || !request.name) {
+			throw new HTTPException(400, {
+				message: "Invalid Google account data",
+			});
+		}
+
+		const email = request.email;
+		const name = request.name;
+
+		return await userRepository.transaction(async (repo) => {
+			let user = await repo.findByEmail(email);
 
 			if (!user) {
 				const userData = {
-					email: request.email,
-					name: request.name,
+					email,
+					name,
 					role: "USER",
 					loginAt: new Date(),
 					emailVerified: new Date(),
@@ -154,7 +159,7 @@ export class AuthService {
 				user = await repo.create(userData);
 			} else {
 				const loginAt = new Date();
-				await repo.update(user.id, "id", { loginAt });
+				user = await repo.updateById(user.id, { loginAt });
 			}
 
 			const [access, refresh] = await Promise.all([
@@ -186,10 +191,11 @@ export class AuthService {
 
 		const jwtPayload = await verify(
 			request.refreshToken,
-			requireEnv("JWT_REFRESH_SECRET") as string,
+			requireEnv("JWT_REFRESH_SECRET"),
+			"HS256",
 		);
-		const [user] = await UserRepository.findByColumn("id", jwtPayload.id);
-		if (jwtPayload.id !== user.id) {
+		const user = await userRepository.findById(jwtPayload.id as string);
+		if (!user || jwtPayload.id !== user.id) {
 			throw new HTTPException(401, {
 				message: "Unauthorized",
 			});

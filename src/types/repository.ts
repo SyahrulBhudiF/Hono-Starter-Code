@@ -1,4 +1,7 @@
-import { type SQL, type SQLWrapper, sql, eq } from "drizzle-orm";
+// Deprecated: kept only as migration reference.
+// New code must use concrete repositories in src/repository/*.
+// Do not import this generic repository for app features.
+import { eq, type SQL, type SQLWrapper, sql } from "drizzle-orm";
 
 interface SelectOptions {
 	columns?: string[];
@@ -8,7 +11,10 @@ interface SelectOptions {
 	offset?: number;
 }
 
-export class Repository<TEntity extends Record<string, any>> {
+/**
+ * @deprecated Kept only as migration reference. Use concrete repositories in src/repository/*.
+ */
+export class DeprecatedRepository<TEntity extends Record<string, any>> {
 	constructor(
 		private db: any,
 		private table: any,
@@ -52,8 +58,6 @@ export class Repository<TEntity extends Record<string, any>> {
 					return acc;
 				}, {}),
 			);
-		} else {
-			query = this.db.select();
 		}
 
 		const result = await query
@@ -135,7 +139,6 @@ export class Repository<TEntity extends Record<string, any>> {
 			.select({
 				count: sql<number>`count(*)`,
 			})
-			})
 			.from(this.table)
 			.where(where || undefined);
 
@@ -143,10 +146,10 @@ export class Repository<TEntity extends Record<string, any>> {
 	}
 
 	async transaction<T>(
-		fn: (repo: Repository<TEntity>) => Promise<T>,
+		fn: (repo: DeprecatedRepository<TEntity>) => Promise<T>,
 	): Promise<T> {
 		return await this.db.transaction(async (tx: any) => {
-			const repo = new Repository<TEntity>(tx, this.table);
+			const repo = new DeprecatedRepository<TEntity>(tx, this.table);
 			return await fn(repo);
 		});
 	}

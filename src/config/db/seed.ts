@@ -1,9 +1,9 @@
 import { faker } from "@faker-js/faker";
+import { password } from "bun";
+import { reset } from "drizzle-seed";
 import { db } from "./index";
 import * as schema from "./schema";
-import { reset } from "drizzle-seed";
 import { usersTable } from "./schema";
-import { password } from "bun";
 
 async function seed() {
 	console.log("🔄 Seeding users...");
