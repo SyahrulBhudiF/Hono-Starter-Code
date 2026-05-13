@@ -1,10 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { drizzleLogger } from "../logging";
 import { requireEnv } from "../../util/util";
+import { drizzleLogger } from "../logging";
 
 const pool = new Pool({
-	connectionString: requireEnv("DATABASE_URL") as string,
+	connectionString: requireEnv("DATABASE_URL"),
 	max: 15,
 	idleTimeoutMillis: 30000,
 });

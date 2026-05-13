@@ -1,5 +1,5 @@
-import * as winston from "winston";
 import type { Logger } from "drizzle-orm";
+import * as winston from "winston";
 
 const { combine, timestamp, printf, colorize, align } = winston.format;
 

@@ -1,7 +1,8 @@
-import redis from "../config/redis";
-import { generateOTP } from "../util/otp-util";
 import { HTTPException } from "hono/http-exception";
-import { UserRepository, type VerifyOTPRequest } from "../model/user-model";
+import redis from "../config/redis";
+import type { VerifyOTPRequest } from "../model/user-model";
+import { userRepository } from "../repository/user-repository";
+import { generateOTP } from "../util/otp-util";
 
 export class OtpService {
 	static async generateAndStoreOTP(email: string): Promise<string> {
@@ -25,18 +26,15 @@ export class OtpService {
 		await redis.del(`otp:${request.email}`);
 
 		if (purpose === "register") {
-			const user = await UserRepository.findByColumn("email", request.email, {
-				columns: ["emailVerified"],
-				limit: 1,
-			});
+			const user = await userRepository.findByEmail(request.email);
 
-			if (user.length > 0 && user[0].emailVerified) {
+			if (user?.emailVerified) {
 				throw new HTTPException(400, {
 					message: "Email already verified",
 				});
 			}
 
-			await UserRepository.update(request.email, "email", {
+			await userRepository.updateByEmail(request.email, {
 				emailVerified: new Date(),
 			});
 		}

@@ -1,7 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { logger } from "./logging";
 import type { ApplicationVariables } from "../model/app-model";
+import { logger } from "./logging";
 
 export const honoApp = () =>
 	new OpenAPIHono<{ Variables: ApplicationVariables }>({
@@ -10,8 +10,8 @@ export const honoApp = () =>
 				return;
 			}
 
-			const errors = result.error.errors
-				.map((error) => `Invalid ${error.path[0]} (${error.message})`)
+			const errors = result.error.issues
+				.map((error) => `Invalid ${String(error.path[0])} (${error.message})`)
 				.join(", ");
 
 			logger.error(`Validation error: ${errors}`);

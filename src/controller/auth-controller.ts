@@ -1,3 +1,6 @@
+import { googleAuth } from "@hono/oauth-providers/google";
+import { honoApp } from "../config/hono";
+import { authMiddleware } from "../middleware/auth-middleware";
 import {
 	googleLoginRoute,
 	loginRoute,
@@ -8,26 +11,16 @@ import {
 	sendOTPRoute,
 	verifyOTPRoute,
 } from "../route/auth-route";
-import type {
-	LoginUserRequest,
-	RegisterUserRequest,
-	ResetPasswordRequest,
-	SendOTPRequest,
-	VerifyOTPRequest,
-} from "../model/user-model";
 import { AuthService } from "../service/auth-service";
-import { ResponseUtil } from "../util/response-util";
 import { EmailService } from "../service/email-service";
-import { honoApp } from "../config/hono";
 import { OtpService } from "../service/otp-service";
-import { authMiddleware } from "../middleware/auth-middleware";
-import { googleAuth } from "@hono/oauth-providers/google";
+import { ResponseUtil } from "../util/response-util";
 import { requireEnv } from "../util/util";
 
 export const authController = honoApp();
 
 authController.openapi(registerRoute, async (c) => {
-	const request = (await c.req.json()) as RegisterUserRequest;
+	const request = c.req.valid("json");
 
 	const response = await AuthService.register(request);
 
@@ -35,7 +28,7 @@ authController.openapi(registerRoute, async (c) => {
 });
 
 authController.openapi(sendOTPRoute, async (c) => {
-	const request = (await c.req.json()) as SendOTPRequest;
+	const request = c.req.valid("json");
 
 	await EmailService.sendOTP(request.email);
 
@@ -43,7 +36,7 @@ authController.openapi(sendOTPRoute, async (c) => {
 });
 
 authController.openapi(verifyOTPRoute, async (c) => {
-	const request = (await c.req.json()) as VerifyOTPRequest;
+	const request = c.req.valid("json");
 
 	await OtpService.verifyOTP(request, "register");
 
@@ -51,22 +44,19 @@ authController.openapi(verifyOTPRoute, async (c) => {
 });
 
 authController.openapi(loginRoute, async (c) => {
-	const request = (await c.req.json()) as LoginUserRequest;
+	const request = c.req.valid("json");
 
 	const response = await AuthService.login(request);
 
 	return c.json(ResponseUtil.success(response, "Login successfully"));
 });
 
-authController.use(
-	"/logout",
-	authMiddleware(requireEnv("JWT_ACCESS_SECRET") as string),
-);
+authController.use("/logout", authMiddleware(requireEnv("JWT_ACCESS_SECRET")));
 
 authController.openapi(logoutRoute, async (c) => {
 	const token = c.get("token") as string;
 	const userId = c.get("user")?.id as string;
-	const refreshToken = await c.req.json();
+	const { refreshToken } = c.req.valid("json");
 
 	await AuthService.logout(token, refreshToken, userId);
 
@@ -74,7 +64,7 @@ authController.openapi(logoutRoute, async (c) => {
 });
 
 authController.openapi(resetPasswordRoute, async (c) => {
-	const request = (await c.req.json()) as ResetPasswordRequest;
+	const request = c.req.valid("json");
 
 	await AuthService.resetPassword(request);
 
@@ -84,8 +74,8 @@ authController.openapi(resetPasswordRoute, async (c) => {
 authController.use(
 	"/google",
 	googleAuth({
-		client_id: requireEnv("GOOGLE_CLIENT_ID") as string,
-		client_secret: requireEnv("GOOGLE_CLIENT_SECRET") as string,
+		client_id: requireEnv("GOOGLE_CLIENT_ID"),
+		client_secret: requireEnv("GOOGLE_CLIENT_SECRET"),
 		scope: ["openid", "email", "profile"],
 	}),
 );
@@ -106,7 +96,7 @@ authController.openapi(googleLoginRoute, async (c) => {
 });
 
 authController.openapi(refreshTokenRoute, async (c) => {
-	const request = (await c.req.json()) as { refreshToken: string };
+	const request = c.req.valid("json");
 
 	const response = await AuthService.refreshToken(request);
 

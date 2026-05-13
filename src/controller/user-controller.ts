@@ -1,27 +1,19 @@
+import type { User } from "../config/db/schema";
 import { honoApp } from "../config/hono";
+import { authMiddleware } from "../middleware/auth-middleware";
+import { toUserResponse, type UserResponse } from "../model/user-model";
 import {
 	changePasswordRoute,
 	getUserRoute,
 	updateUserRoute,
 } from "../route/user-route";
-import { ResponseUtil } from "../util/response-util";
-import type { User } from "../config/db/schema";
-import {
-	type ChangePasswordRequest,
-	toUserResponse,
-	type UpdateUserRequest,
-	type UserResponse,
-} from "../model/user-model";
-import { authMiddleware } from "../middleware/auth-middleware";
 import { UserService } from "../service/user-service";
+import { ResponseUtil } from "../util/response-util";
 import { requireEnv } from "../util/util";
 
 export const userController = honoApp();
 
-userController.use(
-	"/user/*",
-	authMiddleware(requireEnv("JWT_ACCESS_SECRET") as string),
-);
+userController.use("/user/*", authMiddleware(requireEnv("JWT_ACCESS_SECRET")));
 
 userController.openapi(getUserRoute, async (c) => {
 	const request = c.get("user") as User;
@@ -37,7 +29,7 @@ userController.openapi(getUserRoute, async (c) => {
 });
 
 userController.openapi(updateUserRoute, async (c) => {
-	const request = (await c.req.json()) as UpdateUserRequest;
+	const request = c.req.valid("json");
 	const user = c.get("user") as User;
 
 	const response = await UserService.update(request, user);
@@ -48,7 +40,7 @@ userController.openapi(updateUserRoute, async (c) => {
 });
 
 userController.openapi(changePasswordRoute, async (c) => {
-	const request = (await c.req.json()) as ChangePasswordRequest;
+	const request = c.req.valid("json");
 	const user = c.get("user") as User;
 
 	await UserService.changePassword(request, user);

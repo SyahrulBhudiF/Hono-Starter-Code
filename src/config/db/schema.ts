@@ -1,7 +1,7 @@
-import { pgEnum, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
-import { uuid } from "drizzle-orm/pg-core/columns/uuid";
 import { sql } from "drizzle-orm";
+import { pgEnum, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 import { date } from "drizzle-orm/pg-core/columns/date";
+import { uuid } from "drizzle-orm/pg-core/columns/uuid";
 import { Role } from "../../types/enum/role-enum";
 import { enumToArray } from "../../util/enum-util";
 

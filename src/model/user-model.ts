@@ -1,8 +1,4 @@
-import { type User, usersTable } from "../config/db/schema";
-import { Repository } from "../types/repository";
-import { db } from "../config/db";
-
-export const UserRepository = new Repository<User>(db, usersTable);
+import type { User } from "../config/db/schema";
 
 export type RegisterUserRequest = {
 	name: string;
@@ -18,7 +14,7 @@ export type LoginUserRequest = {
 export type ResetPasswordRequest = {
 	email: string;
 	password: string;
-	otp: number;
+	otp: string;
 };
 
 export type UpdateUserRequest = {
@@ -36,7 +32,7 @@ export type SendOTPRequest = {
 
 export type VerifyOTPRequest = {
 	email: string;
-	otp: number;
+	otp: string;
 };
 
 export type TokenResponse = {

@@ -1,128 +1,60 @@
-import { createRoute } from "@hono/zod-openapi";
-import { z, type ZodType } from "zod";
+import { z } from "@hono/zod-openapi";
+import type { ZodType } from "zod";
 
-export const createRouteUtil = (option: {
-	method: "post" | "get" | "put" | "patch" | "delete";
-	path: string;
-	tags: string[];
-	responseSchema: ZodType;
-	requestSchema?: ZodType;
-	security?: Parameters<typeof createRoute>[0]["security"];
-	description?: string;
-}) => {
-	return createRoute({
-		method: option.method,
-		path: option.path,
-		description: option.description,
-		tags: option.tags,
-		security: option.security,
-		...(option.requestSchema
-			? {
-					request: {
-						body: {
-							content: {
-								"application/json": {
-									schema: option.requestSchema,
-								},
-							},
-						},
-					},
-				}
-			: {}),
-		responses: {
-			200: {
-				description: "Success",
-				content: {
-					"application/json": {
-						schema: option.responseSchema,
-					},
-				},
-			},
-			400: {
-				description: "Bad Request",
-				content: {
-					"application/json": {
-						schema: z.object({
-							status: z.string(),
-							message: z.string(),
-							data: z.null(),
-						}),
-						example: {
-							status: "error",
-							message: "Invalid request data",
-							data: null,
-						},
-					},
-				},
-			},
-			401: {
-				description: "Unauthorized",
-				content: {
-					"application/json": {
-						schema: z.object({
-							status: z.string(),
-							message: z.string(),
-							data: z.null(),
-						}),
-						example: {
-							status: "error",
-							message: "Unauthorized access",
-							data: null,
-						},
-					},
-				},
-			},
-			403: {
-				description: "Forbidden",
-				content: {
-					"application/json": {
-						schema: z.object({
-							status: z.string(),
-							message: z.string(),
-							data: z.null(),
-						}),
-						example: {
-							status: "error",
-							message: "Access forbidden",
-							data: null,
-						},
-					},
-				},
-			},
-			404: {
-				description: "Not Found",
-				content: {
-					"application/json": {
-						schema: z.object({
-							status: z.string(),
-							message: z.string(),
-							data: z.null(),
-						}),
-						example: {
-							status: "error",
-							message: "Resource not found",
-							data: null,
-						},
-					},
-				},
-			},
-			500: {
-				description: "Internal Server Error",
-				content: {
-					"application/json": {
-						schema: z.object({
-							status: z.string(),
-							message: z.string(),
-							data: z.null(),
-						}),
-						example: {
-							status: "error",
-							message: "Internal server error",
-							data: null,
-						},
-					},
-				},
+const errorResponseSchema = z.object({
+	status: z.number(),
+	message: z.string(),
+	data: z.null(),
+});
+
+const errorContent = (status: number, message: string) => ({
+	"application/json": {
+		schema: errorResponseSchema,
+		example: {
+			status,
+			message,
+			data: null,
+		},
+	},
+});
+
+export const jsonBody = <const TSchema extends ZodType>(schema: TSchema) => ({
+	body: {
+		content: {
+			"application/json": {
+				schema,
 			},
 		},
-	});
-};
+	},
+});
+
+export const createResponses = (responseSchema: ZodType) => ({
+	200: {
+		description: "Success",
+		content: {
+			"application/json": {
+				schema: responseSchema,
+			},
+		},
+	},
+	400: {
+		description: "Bad Request",
+		content: errorContent(400, "Invalid request data"),
+	},
+	401: {
+		description: "Unauthorized",
+		content: errorContent(401, "Unauthorized access"),
+	},
+	403: {
+		description: "Forbidden",
+		content: errorContent(403, "Access forbidden"),
+	},
+	404: {
+		description: "Not Found",
+		content: errorContent(404, "Resource not found"),
+	},
+	500: {
+		description: "Internal Server Error",
+		content: errorContent(500, "Internal server error"),
+	},
+});

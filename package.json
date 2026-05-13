@@ -10,30 +10,36 @@
 		"format": "bunx biome format .",
 		"format:fix": "bunx biome format --write .",
 		"check": "bunx biome check .",
-		"check:fix": "bunx biome check --write ."
+		"check:fix": "bunx biome check --write .",
+		"test": "bun test",
+		"test:unit": "bun test test/unit",
+		"test:integration": "bun test test/integration"
 	},
 	"dependencies": {
-		"@faker-js/faker": "^9.9.0",
-		"@hono/oauth-providers": "^0.6.2",
-		"@hono/swagger-ui": "^0.5.2",
-		"@hono/zod-openapi": "^0.18.4",
-		"@types/nodemailer": "^6.4.20",
+		"@faker-js/faker": "^10.4.0",
+		"@hono/oauth-providers": "^0.8.5",
+		"@hono/swagger-ui": "^0.6.1",
+		"@hono/zod-openapi": "^1.4.0",
+		"@scalar/hono-api-reference": "^0.10.14",
+		"@types/nodemailer": "^8.0.0",
 		"bull": "^4.16.5",
-		"dotenv": "^16.6.1",
-		"drizzle-orm": "^0.39.3",
+		"dotenv": "^17.4.2",
+		"drizzle-orm": "^0.45.2",
 		"drizzle-seed": "^0.3.1",
-		"hono": "^4.9.12",
-		"ioredis": "^5.8.1",
-		"nodemailer": "^6.10.1",
-		"pg": "^8.16.3",
-		"winston": "^3.18.3",
-		"zod": "^3.25.76"
+		"hono": "^4.12.18",
+		"ioredis": "^5.10.1",
+		"nodemailer": "^8.0.7",
+		"pg": "^8.20.0",
+		"swagger-ui-dist": "^5.32.6",
+		"winston": "^3.19.0",
+		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.2.6",
-		"@types/bun": "latest",
-		"@types/pg": "^8.15.5",
-		"drizzle-kit": "^0.30.6",
-		"tsx": "^4.20.6"
+		"@biomejs/biome": "2.4.15",
+		"@types/bun": "^1.3.14",
+		"@types/pg": "^8.20.0",
+		"bun-types": "^1.3.14",
+		"drizzle-kit": "^0.31.10",
+		"tsx": "^4.21.0"
 	}
 }
