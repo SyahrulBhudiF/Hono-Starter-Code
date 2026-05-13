@@ -1,154 +1,162 @@
-# Contributing to Hono RestAPI Starter Kit
+# Contributing to Hono Starter Code
 
-Thank you for your interest in contributing to the Hono RestAPI Starter Kit! This document provides guidelines and
-instructions for contributing to this project.
+Thanks for contributing.
 
-## Table of Contents
+## Getting started
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Process](#development-process)
-    - [Setting Up Your Development Environment](#setting-up-your-development-environment)
-    - [Making Changes](#making-changes)
-    - [Testing Your Changes](#testing-your-changes)
-- [Pull Request Process](#pull-request-process)
-- [Coding Standards](#coding-standards)
-- [Commit Message Guidelines](#commit-message-guidelines)
-- [Bug Reports and Feature Requests](#bug-reports-and-feature-requests)
+1. Fork and clone the repository.
 
-## Code of Conduct
-
-This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to
-uphold this code. Please report unacceptable behavior to the project maintainers.
-
-## Getting Started
-
-To get started with contributing:
-
-1. Fork the repository on GitHub
-2. Clone your fork locally:
-   ```bash
-   git clone https://github.com/SyahrulBhudiF/Hono-Starter-Code
-   cd Hono-Starter-Code
-   ```
-3. Add the original repository as an upstream remote:
-   ```bash
-   git remote add upstream https://github.com/SyahrulBhudiF/Hono-Starter-Code
-   ```
-4. Install dependencies:
-   ```bash
-   bun install
-   ```
-
-## Development Process
-
-### Setting Up Your Development Environment
-
-1. Create a new branch for your changes:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-   or
-   ```bash
-   git checkout -b fix/issue-you-are-fixing
-   ```
-
-2. Set up your environment variables:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your development configuration
-   ```
-
-3. Start the development environment:
-   ```bash
-   docker compose up
-   ```
-
-### Making Changes
-
-When working on the codebase:
-
-- Keep your changes focused on a single issue or feature
-- Follow the existing code style and architecture
-- Document any new features or changes to existing functionality
-- Add/update comments for complex code sections
-- Update the README if necessary
-
-### Testing Your Changes
-
-Although the project doesn't have formal tests yet, please make sure to:
-
-1. Manually test your changes thoroughly
-2. Verify API endpoints work as expected using the Swagger UI
-3. Check that your changes don't break existing functionality
-
-## Pull Request Process
-
-1. Update your fork to the latest upstream changes:
-   ```bash
-   git fetch upstream
-   git merge upstream/main
-   ```
-
-2. Push your changes to your fork:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-3. Submit a pull request through the GitHub interface:
-    - Use a clear and descriptive title
-    - Include a comprehensive description of the changes
-    - Reference any related issues using the GitHub issue number (#123)
-    - Request reviews from maintainers if applicable
-
-4. Address any feedback or requested changes from the code review
-
-5. Once approved, your changes will be merged by a maintainer
-
-## Coding Standards
-
-Follow these guidelines when writing code:
-
-- Use TypeScript for all new code
-- Follow the existing code style and architecture
-- Keep functions small and focused on a single task
-- Use clear variable and function names
-- Add JSDoc comments for public APIs and complex logic
-
-## Commit Message Guidelines
-
-We follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
+```bash
+git clone https://github.com/SyahrulBhudiF/Hono-Starter-Code
+cd Hono-Starter-Code
 ```
 
-- `type`: feat, fix, docs, style, refactor, test, chore
-- `scope`: optional, the part of the codebase affected (e.g., auth, db, api)
-- `subject`: short description of the change
-- `body`: detailed explanation (optional)
-- `footer`: reference issues, breaking changes (optional)
+2. Install dependencies.
 
-Examples:
-
-```
-feat(auth): add OAuth2 authentication with Google
-
-fix(db): resolve connection pooling issue
+```bash
+bun install
 ```
 
-## Bug Reports and Feature Requests
+3. Create env file.
 
-For bug reports and feature requests, please create an issue on GitHub:
+```bash
+cp .env.example .env
+```
 
-- Be as detailed as possible in your description
-- Include steps to reproduce for bugs
-- For feature requests, explain the use case and benefits
+4. Start services.
 
----
+```bash
+docker compose up --build
+```
 
-Thank you for contributing to the Hono RestAPI Starter Kit! Your efforts help make this project better for everyone.
+Or run the app directly if PostgreSQL and Redis are already available:
+
+```bash
+bun run dev
+```
+
+## Environment notes
+
+For Docker Compose, Redis host should be the Compose service name:
+
+```env
+REDIS_HOST=redis
+REDIS_PORT=6379
+```
+
+For local development outside Docker:
+
+```env
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+Use `DATABASE_URL` that matches your runtime:
+
+```env
+# Docker Compose
+DATABASE_URL=postgresql://user123:user123@db:5432/hono_starter
+
+# Local
+DATABASE_URL=postgresql://user123:user123@localhost:5432/hono_starter
+```
+
+## Development workflow
+
+Create a focused branch:
+
+```bash
+git checkout -b feat/your-feature
+```
+
+Keep changes small and scoped. Update docs when behavior, setup, routes, or scripts change.
+
+## Architecture guidelines
+
+- Use Hono route modules in `src/route`.
+- Use controllers only for HTTP request/response handling.
+- Put business logic in `src/service`.
+- Put Drizzle queries in concrete repositories under `src/repository`.
+- Do not add new code that imports the deprecated generic repository in `src/types/repository.ts`.
+- Put request schemas in `src/validation`.
+- Use `@hono/zod-openapi` schemas for OpenAPI routes.
+- Prefer `app.request()` for integration tests.
+
+## Checks before PR
+
+Run:
+
+```bash
+bun run check
+bunx tsc --noEmit
+bun test
+```
+
+Auto-fix formatting/lint issues:
+
+```bash
+bun run check:fix
+```
+
+## Testing
+
+```bash
+bun test
+bun run test:unit
+bun run test:integration
+```
+
+Unit tests live in `test/unit`.
+Integration tests live in `test/integration` and should use Hono `app.request()` when possible.
+
+## Pull request process
+
+1. Rebase or merge latest `main`.
+2. Run checks and tests.
+3. Push your branch.
+4. Open a PR with:
+   - clear title
+   - summary of changes
+   - test/check output
+   - linked issue if relevant
+
+## Coding standards
+
+- TypeScript for all app code.
+- Keep functions small.
+- Avoid compatibility shims and dead abstractions.
+- Prefer concrete repositories over generic database wrappers.
+- Avoid unsafe casts unless there is no practical alternative.
+- Let Drizzle schema/types guide DB code.
+- Keep OpenAPI docs in sync with handlers.
+
+## Commit messages
+
+Use Conventional Commits:
+
+```text
+feat(auth): add password reset
+fix(db): handle missing user update
+refactor(api): simplify route definitions
+test(app): add scalar docs smoke test
+docs(readme): update setup guide
+```
+
+Common types:
+
+- `feat`
+- `fix`
+- `docs`
+- `refactor`
+- `test`
+- `chore`
+
+## Bug reports and feature requests
+
+Open an issue with:
+
+- expected behavior
+- actual behavior
+- reproduction steps
+- logs/screenshots if useful
+- proposed solution if you have one
