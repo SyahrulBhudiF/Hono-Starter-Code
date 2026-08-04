@@ -2,3 +2,6 @@
 node_modules/
 .env
 .idea
+
+# test coverage
+coverage/
