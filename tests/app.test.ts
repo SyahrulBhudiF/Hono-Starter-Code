@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, test, vi } from "vitest";
+import { logger } from "../src/config/logging";
 
 vi.mock("../src/config/redis", () => ({
 	default: {
@@ -62,5 +63,26 @@ describe("app", () => {
 		expect(response.status).toBe(422);
 		expect(body).toMatchObject({ status: 422 });
 		expect(body.message).toContain("Invalid");
+	});
+
+	test("logs failed requests with their status", async () => {
+		const infoSpy = vi.spyOn(logger, "info");
+
+		const response = await app.request("/api/v1/auth/login", {
+			method: "POST",
+			body: JSON.stringify({ email: "not-email", password: "x" }),
+			headers: {
+				"Content-Type": "application/json",
+				Origin: "http://localhost:3000",
+			},
+		});
+
+		expect(response.status).toBe(422);
+		expect(infoSpy).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'"method":"POST",' + '"path":"/api/v1/auth/login",' + '"status":422',
+			),
+		);
+		infoSpy.mockRestore();
 	});
 });

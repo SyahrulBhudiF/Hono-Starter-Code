@@ -10,13 +10,14 @@ export const rateLimit = (
 	return async (c, next) => {
 		const key = `rate-limit:${c.req.path}:${getClientIp(c)}`;
 		const count = await redis.incr(key);
-		if (count === 1) {
+		let ttl = await redis.ttl(key);
+		if (ttl === -1) {
 			await redis.expire(key, windowSeconds);
+			ttl = windowSeconds;
 		}
 
 		if (count > limit) {
-			const retryAfter = await redis.ttl(key);
-			c.header("Retry-After", String(Math.max(1, retryAfter)));
+			c.header("Retry-After", String(Math.max(1, ttl)));
 			throw new HTTPException(429, { message: "Too many requests" });
 		}
 
