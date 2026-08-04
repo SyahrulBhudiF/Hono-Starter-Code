@@ -1,8 +1,10 @@
 import { swaggerUI } from "@hono/swagger-ui";
 import { Scalar } from "@scalar/hono-api-reference";
+import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
 import { honoApp } from "./config/hono";
+import { requestLogger } from "./middleware/request-logger";
 import { api } from "./route";
 import errorUtil from "./util/error-util";
 
@@ -10,6 +12,15 @@ export const createApp = () => {
 	const app = honoApp();
 
 	app.use("*", requestId());
+	app.use("*", requestLogger());
+	app.use(
+		"/api/*",
+		cors({
+			origin:
+				process.env.CORS_ORIGINS?.split(",").map((origin) => origin.trim()) ??
+				[],
+		}),
+	);
 	app.use("*", secureHeaders());
 
 	app.route("/api/v1", api);
