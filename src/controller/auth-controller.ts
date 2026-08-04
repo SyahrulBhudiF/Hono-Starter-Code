@@ -54,8 +54,8 @@ authController.openapi(loginRoute, async (c) => {
 authController.use("/logout", authMiddleware(requireEnv("JWT_ACCESS_SECRET")));
 
 authController.openapi(logoutRoute, async (c) => {
-	const token = c.get("token") as string;
-	const userId = c.get("user")?.id as string;
+	const token = c.get("token");
+	const userId = c.get("user").id;
 	const { refreshToken } = c.req.valid("json");
 
 	await AuthService.logout(token, refreshToken, userId);

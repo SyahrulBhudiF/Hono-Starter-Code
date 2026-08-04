@@ -1,4 +1,4 @@
-import type { Context, MiddlewareHandler, Next } from "hono";
+import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { verify } from "hono/jwt";
 import type { JWTPayload } from "hono/utils/jwt/types";
@@ -10,8 +10,8 @@ import { userRepository } from "../repository/user-repository";
 export const authMiddleware = (
 	secret: string,
 	role?: string,
-): MiddlewareHandler => {
-	return async (c: Context, next: Next) => {
+): MiddlewareHandler<{ Variables: ApplicationVariables }> => {
+	return async (c, next) => {
 		const authHeader = c.req.header("Authorization");
 		if (!authHeader?.startsWith("Bearer ")) {
 			throw new HTTPException(401, { message: "Unauthorized" });
@@ -51,10 +51,7 @@ export const authMiddleware = (
 		}
 
 		c.set("user", user);
-		(c.set as (key: keyof ApplicationVariables, value: unknown) => void)(
-			"token",
-			token,
-		);
+		c.set("token", token);
 
 		await next();
 	};

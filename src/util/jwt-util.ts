@@ -32,6 +32,7 @@ export async function generateRefreshToken(user: User): Promise<string> {
 	return await sign(
 		{
 			id: user.id,
+			jti: crypto.randomUUID(),
 			iat: Math.floor(Date.now() / 1000),
 			exp:
 				Math.floor(Date.now() / 1000) + 60 * 60 * 24 * REFRESH_TOKEN_EXPIRES_IN,

@@ -100,9 +100,20 @@ export class AuthService {
 			});
 		}
 
-		await redis.set(`blacklist:${token}`, "true");
-		await redis.del(`user:${userId}`);
-		await redis.set(`blacklist:${refreshToken}`, "true");
+		const refreshPayload = await verify(
+			refreshToken,
+			requireEnv("JWT_REFRESH_SECRET"),
+			"HS256",
+		);
+		if (refreshPayload.id !== userId) {
+			throw new HTTPException(401, { message: "Unauthorized" });
+		}
+
+		await Promise.all([
+			blacklistToken(token, getTokenExpiresIn(jwtPayload)),
+			redis.del(`user:${userId}`),
+			blacklistToken(refreshToken, getTokenExpiresIn(refreshPayload)),
+		]);
 
 		logger.info("User logged out successfully");
 	}
@@ -201,11 +212,38 @@ export class AuthService {
 			});
 		}
 
-		const [access, refresh] = await Promise.all([
-			generateAccessToken(user),
-			generateRefreshToken(user),
-		]);
+		const expiresIn = getTokenExpiresIn(jwtPayload);
+		const access = await generateAccessToken(user);
+		const refresh = await generateRefreshToken(user);
+		const wasBlacklisted = await blacklistToken(
+			request.refreshToken,
+			expiresIn,
+			true,
+		);
+		if (!wasBlacklisted) {
+			throw new HTTPException(401, { message: "Token has been invalidated" });
+		}
 
 		return { accessToken: access, refreshToken: refresh } as TokenResponse;
 	}
+}
+
+function getTokenExpiresIn(payload: { exp?: unknown }): number {
+	if (typeof payload.exp !== "number") {
+		throw new HTTPException(401, { message: "Unauthorized" });
+	}
+
+	return Math.max(1, payload.exp - Math.floor(Date.now() / 1000));
+}
+
+async function blacklistToken(
+	token: string,
+	expiresIn: number,
+	onlyIfAbsent = false,
+): Promise<boolean> {
+	const result = onlyIfAbsent
+		? await redis.set(`blacklist:${token}`, "true", "EX", expiresIn, "NX")
+		: await redis.set(`blacklist:${token}`, "true", "EX", expiresIn);
+
+	return result === "OK";
 }
