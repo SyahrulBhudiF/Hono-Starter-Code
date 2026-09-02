@@ -11,7 +11,8 @@ const { default: errorUtil } = await import("../src/util/error-util");
 function context() {
 	const status = vi.fn();
 	const json = vi.fn((body) => body);
-	return { status, json };
+	const get = vi.fn(() => "req-123");
+	return { status, json, get };
 }
 
 describe("errorUtil", () => {

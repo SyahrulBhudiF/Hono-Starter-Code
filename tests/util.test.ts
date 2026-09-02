@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { Role } from "../src/types/enum/role-enum";
 import { enumToArray } from "../src/util/enum-util";
-import { generateOTP } from "../src/util/otp-util";
+import { generateOTP, isOTPMatch } from "../src/util/otp-util";
 import { ResponseUtil } from "../src/util/response-util";
 import { requireEnv } from "../src/util/util";
 
@@ -15,12 +15,17 @@ describe("utility helpers", () => {
 		expect(generateOTP(4)).toMatch(/^\d{4}$/);
 	});
 
+	test("compares OTPs without leaking length mismatches", () => {
+		expect(isOTPMatch("123456", "123456")).toBe(true);
+		expect(isOTPMatch("123456", "654321")).toBe(false);
+		expect(isOTPMatch("12345", "123456")).toBe(false);
+	});
+
 	test("builds success and error response bodies", () => {
 		expect(ResponseUtil.success({ id: 1 }, "Created")).toEqual({
-			status: "success",
+			status: 200,
 			message: "Created",
 			data: { id: 1 },
-			paging: undefined,
 		});
 		expect(ResponseUtil.error("Missing", 404)).toEqual({
 			status: 404,

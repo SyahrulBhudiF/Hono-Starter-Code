@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Hono/Bun REST API starter with PostgreSQL, Drizzle ORM, Redis, JWT auth, Zod OpenAPI, Swagger UI, Scalar, Biome, and Bun tests.
+Hono/Bun REST API starter with PostgreSQL, Drizzle ORM, Redis, JWT auth, Zod OpenAPI, Scalar, Biome, and Vitest.
 
 ## Essentials
 
@@ -10,7 +10,8 @@ Hono/Bun REST API starter with PostgreSQL, Drizzle ORM, Redis, JWT auth, Zod Ope
 - API framework: **Hono** + `@hono/zod-openapi`.
 - Database: **PostgreSQL** via **Drizzle ORM**.
 - Redis is used for cache/session/OTP/token blacklist and Bull queues.
-- Prefer concrete repositories in `src/repository/*`; do not add new imports from deprecated `src/types/repository.ts`.
+- Prefer concrete repositories in `src/repository/*`.
+- Read configuration through `src/config/env.ts`; never read `process.env` in app code.
 
 No Cursor rules or Copilot instructions were present when this file was created.
 
@@ -59,53 +60,50 @@ bun run check:fix
 Typecheck:
 
 ```bash
-bunx tsc --noEmit
+bun run typecheck
 ```
 
 Tests:
 
 ```bash
-bun test
-bun run test:unit
-bun run test:integration
+bun run test
+bun run coverage
 ```
 
 Run one test file:
 
 ```bash
-bun test test/unit/response-util.test.ts
-bun test test/integration/app.test.ts
+bunx vitest run tests/response-util.test.ts
 ```
 
 Run one test by name:
 
 ```bash
-bun test -t "GET /doc returns OpenAPI 3.1 document"
+bunx vitest run -t "serves the application and API documentation"
 ```
 
 Before committing or handing off, run:
 
 ```bash
-bun run check && bunx tsc --noEmit && bun test
+bun run check && bun run typecheck && bun run coverage
 ```
 
 ## Project structure
 
 ```text
-src/app.ts             Hono app factory, global middleware, docs routes
-src/index.ts           app entry point
-src/config/            db, redis, queue, mail, logging config
+src/app.ts             Hono app factory, global middleware, docs and health routes
+src/index.ts           Bun default-export entrypoint and shutdown handlers
+src/config/            env, db, redis, queue, mail, logging config
 src/controller/        Hono handlers; HTTP only
 src/middleware/        Hono middleware
 src/model/             request/response types and mappers
 src/repository/        concrete Drizzle repositories
 src/route/             OpenAPI route definitions
 src/service/           business logic
-src/types/             shared types; deprecated repository reference
+src/types/             shared enums and types
 src/util/              small utilities
 src/validation/        Zod request schemas
-test/unit/             unit tests
-test/integration/      Hono app.request() integration tests
+tests/                 Vitest unit and integration tests
 ```
 
 ## Environment
@@ -113,12 +111,11 @@ test/integration/      Hono app.request() integration tests
 - Copy `.env.example` to `.env`.
 - Local app uses local hosts, e.g. `REDIS_HOST=localhost`, database host `localhost`.
 - Docker Compose overrides service hosts, e.g. `REDIS_HOST=redis`, database host `db`.
-- `requireEnv<T = string>(name)` defaults to string. Use explicit generic only when needed:
-
-```ts
-requireEnv("JWT_ACCESS_SECRET")
-requireEnv<number>("REDIS_PORT")
-```
+- `src/config/env.ts` parses and validates the environment once at startup. Import `env`
+  from it instead of touching `process.env`.
+- `requireEnv` in `src/util/util.ts` exists only for `drizzle.config.ts`, which must run
+  without the full application schema.
+- JWT secrets must be at least 32 characters. Generate with `openssl rand -hex 32`.
 
 ## Code style
 
@@ -145,10 +142,16 @@ requireEnv<number>("REDIS_PORT")
 - Keep route schemas in `src/route/*` and request schemas in `src/validation/*`.
 - Controllers should use `c.req.valid("json")` for validated JSON bodies.
 - Do not parse validated OpenAPI request bodies with `await c.req.json()`.
-- Keep docs routes available:
+- The Bun entrypoint is a default export (`{ port, fetch }`), per the Hono Bun docs.
+  Do not swap it for `Bun.serve` without a reason; Hono ships no `serve()` for Bun.
+- Keep these routes available:
   - `/doc` OpenAPI JSON
-  - `/ui` Swagger UI
   - `/scalar` Scalar API Reference
+  - `/health` dependency health check
+- Success bodies use a numeric `status` that matches the HTTP status; declare
+  `status: z.number()` in route schemas.
+- Pass an explicit status to `c.json(body, 200)` in handlers so the OpenAPI response
+  union resolves.
 
 ## Layering rules
 
@@ -163,7 +166,7 @@ Do not put Drizzle queries directly in controllers or services when a repository
 ## Repository and Drizzle rules
 
 - Add concrete repositories under `src/repository/*`.
-- Do not use the deprecated generic repository in `src/types/repository.ts` for new code.
+- Find and update queries must exclude soft-deleted rows with `isNull(usersTable.deletedAt)`.
 - Use Drizzle schema types:
 
 ```ts
@@ -184,10 +187,15 @@ type NewUser = typeof usersTable.$inferInsert
 - Avoid account enumeration when possible.
 - Verify tokens before mutating Redis state.
 - Cache only real users; never cache `null`.
+- Call `invalidateUserCache(userId)` after every user write, otherwise a stale role or
+  password survives in Redis for the cache TTL.
+- Blacklist tokens by their `jti`, never by the raw token string.
 
 ## Testing
 
-- Use Bun test: `import { describe, expect, test } from "bun:test"`.
+- Use Vitest: `import { describe, expect, test } from "vitest"`.
+- `tests/setup-env.ts` provides the environment; do not set env vars inside test files.
+- Reuse `userFixture` from `tests/fixtures.ts` for `User` rows.
 - Integration tests should prefer Hono `app.request()` from `createApp()`.
 - Do not require a running HTTP server for app route smoke tests.
 - Add/update tests when changing behavior, validation, route docs, or helpers.
@@ -199,6 +207,9 @@ type NewUser = typeof usersTable.$inferInsert
 - App container database host should be `db`.
 - App/worker Redis host should be `redis`.
 - Avoid duplicating every env var inside `compose.yaml`.
+- The Dockerfile is multi-stage; the runtime stage runs as the non-root `bun` user.
+- PostgreSQL extensions belong in `docker/init-db.sql`, not in an entrypoint override.
+- Keep `.dockerignore` covering `.env`, `.git`, `node_modules`, and `coverage`.
 
 ## Git workflow
 

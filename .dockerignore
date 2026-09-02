@@ -1,0 +1,15 @@
+.git
+.github
+.idea
+node_modules
+coverage
+tests
+.env
+.env.local
+Dockerfile
+.dockerignore
+compose.yaml
+README.md
+CONTRIBUTING.md
+AGENTS.md
+LICENSE

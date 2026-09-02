@@ -3,7 +3,7 @@ import { createResponses, jsonBody } from "../util/route-util";
 import { AuthValidation } from "../validation/auth-validation";
 
 const authResponse = z.object({
-	status: z.string(),
+	status: z.number(),
 	message: z.string(),
 	data: z.object({
 		email: z.email(),
@@ -30,7 +30,7 @@ export const sendOTPRoute = createRoute({
 	request: jsonBody(AuthValidation.SEND_OTP),
 	responses: createResponses(
 		z.object({
-			status: z.string(),
+			status: z.number(),
 			message: z.string(),
 			data: z.null(),
 		}),
@@ -45,7 +45,7 @@ export const verifyOTPRoute = createRoute({
 	request: jsonBody(AuthValidation.VERIFY_OTP),
 	responses: createResponses(
 		z.object({
-			status: z.string(),
+			status: z.number(),
 			message: z.string(),
 			data: z.null(),
 		}),
@@ -73,7 +73,7 @@ export const logoutRoute = createRoute({
 	),
 	responses: createResponses(
 		z.object({
-			status: z.string(),
+			status: z.number(),
 			message: z.string(),
 			data: z.null(),
 		}),
@@ -89,7 +89,7 @@ export const resetPasswordRoute = createRoute({
 	request: jsonBody(AuthValidation.RESET_PASSWORD),
 	responses: createResponses(
 		z.object({
-			status: z.string(),
+			status: z.number(),
 			message: z.string(),
 			data: z.null(),
 		}),
@@ -116,7 +116,7 @@ export const refreshTokenRoute = createRoute({
 	),
 	responses: createResponses(
 		z.object({
-			status: z.string(),
+			status: z.number(),
 			message: z.string(),
 			data: z.object({
 				accessToken: z.string(),

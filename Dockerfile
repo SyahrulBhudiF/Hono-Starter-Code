@@ -1,20 +1,13 @@
-# Gunakan base image Bun
-FROM oven/bun:latest
-
-# Set working directory di dalam container
+FROM oven/bun:1-alpine AS dependencies
 WORKDIR /app
-
-# Copy package files terlebih dahulu untuk optimalisasi layer caching
 COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-# Install dependencies
-RUN bun install --frozen-lockfile --force
-
-# Copy semua file source code
-COPY . .
-
-# Expose port
+FROM oven/bun:1-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --chown=bun:bun . .
+USER bun
 EXPOSE 3000
-
-# Run application
-CMD ["bun", "run", "dev"]
+CMD ["bun", "run", "start"]

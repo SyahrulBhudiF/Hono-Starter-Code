@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 import { getConnInfo } from "hono/bun";
 import { HTTPException } from "hono/http-exception";
+import { env } from "../config/env";
 import redis from "../config/redis";
 
 export const rateLimit = (
@@ -11,6 +12,7 @@ export const rateLimit = (
 		const key = `rate-limit:${c.req.path}:${getClientIp(c)}`;
 		const count = await redis.incr(key);
 		let ttl = await redis.ttl(key);
+
 		if (ttl === -1) {
 			await redis.expire(key, windowSeconds);
 			ttl = windowSeconds;
@@ -26,8 +28,9 @@ export const rateLimit = (
 };
 
 export function getClientIp(c: Parameters<MiddlewareHandler>[0]): string {
-	if (process.env.TRUST_PROXY === "true") {
+	if (env.TRUST_PROXY) {
 		const forwardedIp = c.req.header("x-forwarded-for")?.split(",")[0].trim();
+
 		if (forwardedIp) {
 			return forwardedIp;
 		}

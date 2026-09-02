@@ -1,4 +1,6 @@
 import { googleAuth } from "@hono/oauth-providers/google";
+import { HTTPException } from "hono/http-exception";
+import { env } from "../config/env";
 import { honoApp } from "../config/hono";
 import { authMiddleware } from "../middleware/auth-middleware";
 import {
@@ -15,7 +17,6 @@ import { AuthService } from "../service/auth-service";
 import { EmailService } from "../service/email-service";
 import { OtpService } from "../service/otp-service";
 import { ResponseUtil } from "../util/response-util";
-import { requireEnv } from "../util/util";
 
 export const authController = honoApp();
 
@@ -24,7 +25,10 @@ authController.openapi(registerRoute, async (c) => {
 
 	const response = await AuthService.register(request);
 
-	return c.json(ResponseUtil.success(response, "User registered successfully"));
+	return c.json(
+		ResponseUtil.success(response, "User registered successfully"),
+		200,
+	);
 });
 
 authController.openapi(sendOTPRoute, async (c) => {
@@ -32,7 +36,7 @@ authController.openapi(sendOTPRoute, async (c) => {
 
 	await EmailService.sendOTP(request.email);
 
-	return c.json(ResponseUtil.success(null, "OTP sent successfully"));
+	return c.json(ResponseUtil.success(null, "OTP sent successfully"), 200);
 });
 
 authController.openapi(verifyOTPRoute, async (c) => {
@@ -40,7 +44,7 @@ authController.openapi(verifyOTPRoute, async (c) => {
 
 	await OtpService.verifyOTP(request, "register");
 
-	return c.json(ResponseUtil.success(null, "OTP verified successfully"));
+	return c.json(ResponseUtil.success(null, "OTP verified successfully"), 200);
 });
 
 authController.openapi(loginRoute, async (c) => {
@@ -48,10 +52,10 @@ authController.openapi(loginRoute, async (c) => {
 
 	const response = await AuthService.login(request);
 
-	return c.json(ResponseUtil.success(response, "Login successfully"));
+	return c.json(ResponseUtil.success(response, "Login successfully"), 200);
 });
 
-authController.use("/logout", authMiddleware(requireEnv("JWT_ACCESS_SECRET")));
+authController.use("/logout", authMiddleware(env.JWT_ACCESS_SECRET));
 
 authController.openapi(logoutRoute, async (c) => {
 	const token = c.get("token");
@@ -60,7 +64,7 @@ authController.openapi(logoutRoute, async (c) => {
 
 	await AuthService.logout(token, refreshToken, userId);
 
-	return c.json(ResponseUtil.success(null, "Logout successfully"));
+	return c.json(ResponseUtil.success(null, "Logout successfully"), 200);
 });
 
 authController.openapi(resetPasswordRoute, async (c) => {
@@ -68,14 +72,14 @@ authController.openapi(resetPasswordRoute, async (c) => {
 
 	await AuthService.resetPassword(request);
 
-	return c.json(ResponseUtil.success(null, "Reset password successfully"));
+	return c.json(ResponseUtil.success(null, "Reset password successfully"), 200);
 });
 
 authController.use(
 	"/google",
 	googleAuth({
-		client_id: requireEnv("GOOGLE_CLIENT_ID"),
-		client_secret: requireEnv("GOOGLE_CLIENT_SECRET"),
+		client_id: env.GOOGLE_CLIENT_ID,
+		client_secret: env.GOOGLE_CLIENT_SECRET,
 		scope: ["openid", "email", "profile"],
 	}),
 );
@@ -84,15 +88,14 @@ authController.openapi(googleLoginRoute, async (c) => {
 	const user = c.get("user-google");
 
 	if (!user) {
-		return c.json(
-			ResponseUtil.error("Failed to fetch user from Google", 500),
-			500,
-		);
+		throw new HTTPException(502, {
+			message: "Failed to fetch user from Google",
+		});
 	}
 
 	const response = await AuthService.googleLogin(user);
 
-	return c.json(ResponseUtil.success(response, "Login successfully"));
+	return c.json(ResponseUtil.success(response, "Login successfully"), 200);
 });
 
 authController.openapi(refreshTokenRoute, async (c) => {
@@ -100,5 +103,8 @@ authController.openapi(refreshTokenRoute, async (c) => {
 
 	const response = await AuthService.refreshToken(request);
 
-	return c.json(ResponseUtil.success(response, "Refresh token successfully"));
+	return c.json(
+		ResponseUtil.success(response, "Refresh token successfully"),
+		200,
+	);
 });

@@ -1,7 +1,13 @@
 import { HTTPException } from "hono/http-exception";
-import { describe, expect, test, vi } from "vitest";
-import redis from "../src/config/redis";
-import { getClientIp, rateLimit } from "../src/middleware/rate-limit";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+const envMock = { TRUST_PROXY: false };
+
+vi.mock("../src/config/env", () => ({
+	env: envMock,
+	corsOrigins: [],
+	isProduction: false,
+}));
 
 vi.mock("../src/config/redis", () => ({
 	default: {
@@ -10,6 +16,9 @@ vi.mock("../src/config/redis", () => ({
 		ttl: vi.fn(),
 	},
 }));
+
+const { default: redis } = await import("../src/config/redis");
+const { getClientIp, rateLimit } = await import("../src/middleware/rate-limit");
 
 const mockedRedis = vi.mocked(redis);
 
@@ -36,21 +45,28 @@ const run = async (count: number, ttl: number) => {
 	return { result, next, setHeader };
 };
 
+beforeEach(() => {
+	envMock.TRUST_PROXY = false;
+	vi.clearAllMocks();
+});
+
 describe("getClientIp", () => {
 	test("ignores forwarded client IPs unless the proxy is trusted", () => {
-		process.env.TRUST_PROXY = "false";
-
 		expect(getClientIp(context("198.51.100.10"))).toBe("unknown");
 	});
 
 	test("uses the first forwarded IP when the proxy is trusted", () => {
-		process.env.TRUST_PROXY = "true";
+		envMock.TRUST_PROXY = true;
 
 		expect(getClientIp(context("198.51.100.10, 10.0.0.1"))).toBe(
 			"198.51.100.10",
 		);
+	});
 
-		process.env.TRUST_PROXY = "false";
+	test("falls back to unknown when a trusted proxy sends no header", () => {
+		envMock.TRUST_PROXY = true;
+
+		expect(getClientIp(context())).toBe("unknown");
 	});
 });
 

@@ -2,8 +2,8 @@ import type { GoogleUser } from "@hono/oauth-providers/google";
 import { password } from "bun";
 import { HTTPException } from "hono/http-exception";
 import { verify } from "hono/jwt";
+import { env } from "../config/env";
 import { logger } from "../config/logging";
-import redis from "../config/redis";
 import {
 	type LoginUserRequest,
 	type RegisterUserRequest,
@@ -14,21 +14,33 @@ import {
 } from "../model/user-model";
 import { userRepository } from "../repository/user-repository";
 import { generateAccessToken, generateRefreshToken } from "../util/jwt-util";
-import { requireEnv } from "../util/util";
+import {
+	blacklistToken,
+	getTokenExpiresIn,
+	getTokenId,
+	getTokenSubject,
+	isTokenBlacklisted,
+} from "../util/token-util";
+import { invalidateUserCache } from "../util/user-cache";
+import { OtpService } from "./otp-service";
 
-export class AuthService {
-	static async register(request: RegisterUserRequest): Promise<UserResponse> {
-		const hashedPassword = await password.hash(request.password, {
-			algorithm: "bcrypt",
-			cost: 10,
-		});
+const PASSWORD_HASH_OPTIONS = {
+	algorithm: "bcrypt",
+	cost: 10,
+} as const;
 
+export const AuthService = {
+	async register(request: RegisterUserRequest): Promise<UserResponse> {
 		const existingUser = await userRepository.findByEmail(request.email);
+
 		if (existingUser) {
-			throw new HTTPException(400, {
-				message: "Email already taken",
-			});
+			throw new HTTPException(400, { message: "Email already taken" });
 		}
+
+		const hashedPassword = await password.hash(
+			request.password,
+			PASSWORD_HASH_OPTIONS,
+		);
 
 		const user = await userRepository.create({
 			...request,
@@ -38,21 +50,19 @@ export class AuthService {
 		logger.info("User registered successfully");
 
 		return toUserResponse(user);
-	}
+	},
 
-	static async login(request: LoginUserRequest): Promise<UserResponse> {
+	async login(request: LoginUserRequest): Promise<UserResponse> {
 		const user = await userRepository.findByEmail(request.email);
 
 		if (!user?.password) {
 			throw new HTTPException(401, {
-				message: "Email or Password incorrect",
+				message: "Email or password is incorrect",
 			});
 		}
 
 		if (!user.emailVerified) {
-			throw new HTTPException(401, {
-				message: "Email not verified",
-			});
+			throw new HTTPException(401, { message: "Email not verified" });
 		}
 
 		const isPasswordMatch = await password.verify(
@@ -72,178 +82,151 @@ export class AuthService {
 			generateRefreshToken(user),
 		]);
 
-		const response = toUserResponse(user);
-		response.accessToken = access;
-		response.refreshToken = refresh;
-
-		const loginAt = new Date();
-		await userRepository.updateById(user.id, { loginAt });
+		await userRepository.updateById(user.id, { loginAt: new Date() });
+		await invalidateUserCache(user.id);
 
 		logger.info("User logged in successfully");
 
-		return response;
-	}
+		return {
+			...toUserResponse(user),
+			accessToken: access,
+			refreshToken: refresh,
+		};
+	},
 
-	static async logout(
+	async logout(
 		token: string,
 		refreshToken: string,
 		userId: string,
 	): Promise<void> {
-		const jwtPayload = await verify(
-			token,
-			requireEnv("JWT_ACCESS_SECRET"),
-			"HS256",
-		);
-		if (jwtPayload.id !== userId) {
-			throw new HTTPException(401, {
-				message: "Unauthorized",
-			});
+		const accessPayload = await verify(token, env.JWT_ACCESS_SECRET, "HS256");
+
+		if (getTokenSubject(accessPayload) !== userId) {
+			throw new HTTPException(401, { message: "Unauthorized" });
 		}
 
 		const refreshPayload = await verify(
 			refreshToken,
-			requireEnv("JWT_REFRESH_SECRET"),
+			env.JWT_REFRESH_SECRET,
 			"HS256",
 		);
-		if (refreshPayload.id !== userId) {
+
+		if (getTokenSubject(refreshPayload) !== userId) {
 			throw new HTTPException(401, { message: "Unauthorized" });
 		}
 
 		await Promise.all([
-			blacklistToken(token, getTokenExpiresIn(jwtPayload)),
-			redis.del(`user:${userId}`),
-			blacklistToken(refreshToken, getTokenExpiresIn(refreshPayload)),
+			blacklistToken(
+				getTokenId(accessPayload),
+				getTokenExpiresIn(accessPayload),
+			),
+			blacklistToken(
+				getTokenId(refreshPayload),
+				getTokenExpiresIn(refreshPayload),
+			),
+			invalidateUserCache(userId),
 		]);
 
 		logger.info("User logged out successfully");
-	}
+	},
 
-	static async resetPassword(
-		request: ResetPasswordRequest,
-	): Promise<UserResponse> {
-		const storedOTP = await redis.get(`otp:${request.email}`);
-		if (storedOTP !== String(request.otp)) {
-			throw new HTTPException(401, {
-				message: "Invalid OTP",
-			});
-		}
+	async resetPassword(request: ResetPasswordRequest): Promise<UserResponse> {
+		await OtpService.assertValidOTP(request.email, request.otp);
 
-		await redis.del(`otp:${request.email}`);
-
-		const pw = await password.hash(request.password, {
-			algorithm: "bcrypt",
-			cost: 10,
-		});
+		const hashedPassword = await password.hash(
+			request.password,
+			PASSWORD_HASH_OPTIONS,
+		);
 
 		const user = await userRepository.updateByEmail(request.email, {
-			password: pw,
+			password: hashedPassword,
 		});
+
+		await invalidateUserCache(user.id);
 
 		logger.info("Password reset successfully");
 
 		return toUserResponse(user);
-	}
+	},
 
-	static async googleLogin(
-		request: Partial<GoogleUser>,
-	): Promise<UserResponse> {
+	async googleLogin(request: Partial<GoogleUser>): Promise<UserResponse> {
 		if (!request.email || !request.name) {
-			throw new HTTPException(400, {
-				message: "Invalid Google account data",
-			});
+			throw new HTTPException(400, { message: "Invalid Google account data" });
 		}
 
 		const email = request.email;
 		const name = request.name;
 
-		return await userRepository.transaction(async (repo) => {
-			let user = await repo.findByEmail(email);
+		const response = await userRepository.transaction(async (repo) => {
+			const existingUser = await repo.findByEmail(email);
 
-			if (!user) {
-				const userData = {
-					email,
-					name,
-					role: "USER",
-					loginAt: new Date(),
-					emailVerified: new Date(),
-				};
-				user = await repo.create(userData);
-			} else {
-				const loginAt = new Date();
-				user = await repo.updateById(user.id, { loginAt });
-			}
+			const user = existingUser
+				? await repo.updateById(existingUser.id, { loginAt: new Date() })
+				: await repo.create({
+						email,
+						name,
+						role: "USER",
+						loginAt: new Date(),
+						emailVerified: new Date(),
+					});
 
 			const [access, refresh] = await Promise.all([
 				generateAccessToken(user),
 				generateRefreshToken(user),
 			]);
 
-			const response = toUserResponse(user);
-			response.accessToken = access;
-			response.refreshToken = refresh;
-
-			logger.info("User logged in successfully");
-
-			return response;
+			return {
+				...toUserResponse(user),
+				accessToken: access,
+				refreshToken: refresh,
+				id: user.id,
+			};
 		});
-	}
 
-	static async refreshToken(request: {
+		const { id, ...userResponse } = response;
+		await invalidateUserCache(id);
+
+		logger.info("User logged in successfully");
+
+		return userResponse;
+	},
+
+	async refreshToken(request: {
 		refreshToken: string;
 	}): Promise<TokenResponse> {
-		const isBlacklisted = await redis.exists(
-			`blacklist:${request.refreshToken}`,
-		);
-		if (isBlacklisted) {
-			throw new HTTPException(401, {
-				message: "Token has been invalidated",
-			});
-		}
-
-		const jwtPayload = await verify(
+		const payload = await verify(
 			request.refreshToken,
-			requireEnv("JWT_REFRESH_SECRET"),
+			env.JWT_REFRESH_SECRET,
 			"HS256",
 		);
-		const user = await userRepository.findById(jwtPayload.id as string);
-		if (!user || jwtPayload.id !== user.id) {
-			throw new HTTPException(401, {
-				message: "Unauthorized",
-			});
-		}
 
-		const expiresIn = getTokenExpiresIn(jwtPayload);
-		const access = await generateAccessToken(user);
-		const refresh = await generateRefreshToken(user);
-		const wasBlacklisted = await blacklistToken(
-			request.refreshToken,
-			expiresIn,
-			true,
-		);
-		if (!wasBlacklisted) {
+		const tokenId = getTokenId(payload);
+
+		if (await isTokenBlacklisted(tokenId)) {
 			throw new HTTPException(401, { message: "Token has been invalidated" });
 		}
 
-		return { accessToken: access, refreshToken: refresh } as TokenResponse;
-	}
-}
+		const user = await userRepository.findById(getTokenSubject(payload));
 
-function getTokenExpiresIn(payload: { exp?: unknown }): number {
-	if (typeof payload.exp !== "number") {
-		throw new HTTPException(401, { message: "Unauthorized" });
-	}
+		if (!user) {
+			throw new HTTPException(401, { message: "Unauthorized" });
+		}
 
-	return Math.max(1, payload.exp - Math.floor(Date.now() / 1000));
-}
+		const rotated = await blacklistToken(
+			tokenId,
+			getTokenExpiresIn(payload),
+			true,
+		);
 
-async function blacklistToken(
-	token: string,
-	expiresIn: number,
-	onlyIfAbsent = false,
-): Promise<boolean> {
-	const result = onlyIfAbsent
-		? await redis.set(`blacklist:${token}`, "true", "EX", expiresIn, "NX")
-		: await redis.set(`blacklist:${token}`, "true", "EX", expiresIn);
+		if (!rotated) {
+			throw new HTTPException(401, { message: "Token has been invalidated" });
+		}
 
-	return result === "OK";
-}
+		const [access, refresh] = await Promise.all([
+			generateAccessToken(user),
+			generateRefreshToken(user),
+		]);
+
+		return { accessToken: access, refreshToken: refresh };
+	},
+};

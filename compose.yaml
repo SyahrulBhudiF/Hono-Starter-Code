@@ -6,6 +6,7 @@ services:
     env_file:
       - .env
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_HOST: redis
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:3000/api/v1/auth/google}
@@ -18,6 +19,12 @@ services:
       - .:/app
       - /app/node_modules
     command: sh -c "bun run migrate && bun run seed && bun run dev"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     networks:
       - internal_network
 
@@ -26,6 +33,7 @@ services:
     env_file:
       - .env
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_HOST: redis
     depends_on:
@@ -37,6 +45,7 @@ services:
       - .:/app
       - /app/node_modules
     command: sh -c "bun run worker"
+    stop_grace_period: 30s
     networks:
       - internal_network
 
@@ -46,19 +55,13 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 10s
-    command: >
-      sh -c "
-      docker-entrypoint.sh postgres &
-      sleep 5 &&
-      psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c 'CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";' &&
-      wait
-      "
     networks:
       - internal_network
 

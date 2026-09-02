@@ -1,7 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgEnum, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
-import { date } from "drizzle-orm/pg-core/columns/date";
-import { uuid } from "drizzle-orm/pg-core/columns/uuid";
+import { pgEnum, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { Role } from "../../types/enum/role-enum";
 import { enumToArray } from "../../util/enum-util";
 
@@ -11,22 +9,19 @@ export const roleEnum = pgEnum(
 );
 
 export const usersTable = pgTable("users", {
-	id: uuid()
-		.unique()
-		.primaryKey()
-		.default(sql`uuid_generate_v4
-    ()`),
+	id: uuid().primaryKey().default(sql`uuid_generate_v4()`),
 	name: varchar({ length: 100 }).notNull(),
 	email: varchar({ length: 100 }).notNull().unique(),
-	password: varchar({ length: 255 }).default(sql`NULL`),
+	password: varchar({ length: 255 }),
 	role: roleEnum().default("USER").notNull(),
-	emailVerified: timestamp().default(sql`NULL`),
-	loginAt: timestamp().default(sql`NULL`),
-	createdAt: date().default(sql`now
-    ()`),
-	updatedAt: date().default(sql`now
-    ()`),
-	deletedAt: date().default(sql`NULL`),
+	emailVerified: timestamp({ withTimezone: true }),
+	loginAt: timestamp({ withTimezone: true }),
+	createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp({ withTimezone: true })
+		.notNull()
+		.defaultNow()
+		.$onUpdate(() => new Date()),
+	deletedAt: timestamp({ withTimezone: true }),
 });
 
 export type User = typeof usersTable.$inferSelect;
