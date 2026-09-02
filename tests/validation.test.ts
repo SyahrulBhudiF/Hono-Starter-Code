@@ -2,19 +2,9 @@ import { describe, expect, test } from "vitest";
 import { toUserResponse } from "../src/model/user-model";
 import { AuthValidation } from "../src/validation/auth-validation";
 import { UserValidation } from "../src/validation/user-validation";
+import { userFixture } from "./fixtures";
 
-const validUser = {
-	id: "f89d208b-77d4-4f64-9d2a-5e7dc044a150",
-	name: "Jane Doe",
-	email: "jane@example.com",
-	password: "hash",
-	role: "USER" as const,
-	emailVerified: null,
-	loginAt: null,
-	createdAt: null,
-	updatedAt: null,
-	deletedAt: null,
-};
+const validUser = userFixture();
 
 describe("request validation", () => {
 	test("accepts valid auth and user payloads", () => {

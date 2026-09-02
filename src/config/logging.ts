@@ -1,52 +1,27 @@
 import type { Logger } from "drizzle-orm";
 import * as winston from "winston";
+import { env, isProduction } from "./env";
 
-const { combine, timestamp, printf, colorize, align } = winston.format;
+const { combine, timestamp, printf, colorize, align, json, errors } =
+	winston.format;
+
+const developmentFormat = combine(
+	colorize({ all: true }),
+	timestamp({ format: "YYYY-MM-DD hh:mm:ss.SSS A" }),
+	align(),
+	printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
+);
+
+const productionFormat = combine(errors({ stack: true }), timestamp(), json());
 
 export const logger = winston.createLogger({
-	level: process.env.LOG_LEVEL || "info",
-	format: combine(
-		colorize({ all: true }),
-		timestamp({
-			format: "YYYY-MM-DD hh:mm:ss.SSS A",
-		}),
-		align(),
-		printf((info) => `[${info.timestamp}] ${info.level}: ${info.message}`),
-	),
+	level: env.LOG_LEVEL,
+	format: isProduction ? productionFormat : developmentFormat,
 	transports: [new winston.transports.Console()],
 });
 
 export const drizzleLogger: Logger = {
-	logQuery(query: string, params: unknown[]) {
-		const formattedQuery = query.replace(/\s+/g, " ").trim();
-
-		const formattedParams = params.map((param) => {
-			if (typeof param === "string") {
-				return param.replace(/^"(.*)"$/, "$1");
-			}
-			return param;
-		});
-
-		const paramCount = (query.match(/\$\d+/g) || []).length;
-
-		const groupedParams = [];
-		for (let i = 0; i < formattedParams.length; i += paramCount) {
-			groupedParams.push(formattedParams.slice(i, i + paramCount));
-		}
-
-		const logMessage = `
-                === Database Query ===
-                Query: ${formattedQuery}
-                Parameters:
-                ${groupedParams
-									.map(
-										(params, index) =>
-											`  Row ${index + 1}: ${JSON.stringify(params)}`,
-									)
-									.join("\n")}
-                =======================
-                `;
-
-		logger.info(logMessage);
+	logQuery(query: string) {
+		logger.debug(`Database query: ${query.replace(/\s+/g, " ").trim()}`);
 	},
 };

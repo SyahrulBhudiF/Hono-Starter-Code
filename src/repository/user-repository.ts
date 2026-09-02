@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { db } from "../config/db";
 import { type NewUser, type User, usersTable } from "../config/db/schema";
@@ -7,27 +7,53 @@ type Database = typeof db;
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type UserRepositoryDatabase = Database | Transaction;
 
+const UNIQUE_VIOLATION = "23505";
+
+function isUniqueViolation(error: unknown): boolean {
+	if (typeof error !== "object" || error === null) {
+		return false;
+	}
+
+	const cause = "cause" in error ? error.cause : undefined;
+	const code =
+		"code" in error
+			? (error as { code?: unknown }).code
+			: typeof cause === "object" && cause !== null && "code" in cause
+				? (cause as { code?: unknown }).code
+				: undefined;
+
+	return code === UNIQUE_VIOLATION;
+}
+
 export class UserRepository {
 	constructor(private readonly database: UserRepositoryDatabase = db) {}
 
 	async create(data: NewUser): Promise<User> {
-		const [user] = await this.database
-			.insert(usersTable)
-			.values(data)
-			.returning();
+		try {
+			const [user] = await this.database
+				.insert(usersTable)
+				.values(data)
+				.returning();
 
-		if (!user) {
-			throw new HTTPException(500, { message: "Failed to create user" });
+			if (!user) {
+				throw new HTTPException(500, { message: "Failed to create user" });
+			}
+
+			return user;
+		} catch (error) {
+			if (isUniqueViolation(error)) {
+				throw new HTTPException(400, { message: "Email already taken" });
+			}
+
+			throw error;
 		}
-
-		return user;
 	}
 
 	async findById(id: string): Promise<User | null> {
 		const [user] = await this.database
 			.select()
 			.from(usersTable)
-			.where(eq(usersTable.id, id))
+			.where(and(eq(usersTable.id, id), isNull(usersTable.deletedAt)))
 			.limit(1);
 
 		return user ?? null;
@@ -37,7 +63,7 @@ export class UserRepository {
 		const [user] = await this.database
 			.select()
 			.from(usersTable)
-			.where(eq(usersTable.email, email))
+			.where(and(eq(usersTable.email, email), isNull(usersTable.deletedAt)))
 			.limit(1);
 
 		return user ?? null;
@@ -47,7 +73,7 @@ export class UserRepository {
 		const [user] = await this.database
 			.update(usersTable)
 			.set(data)
-			.where(eq(usersTable.id, id))
+			.where(and(eq(usersTable.id, id), isNull(usersTable.deletedAt)))
 			.returning();
 
 		if (!user) {
@@ -61,7 +87,7 @@ export class UserRepository {
 		const [user] = await this.database
 			.update(usersTable)
 			.set(data)
-			.where(eq(usersTable.email, email))
+			.where(and(eq(usersTable.email, email), isNull(usersTable.deletedAt)))
 			.returning();
 
 		if (!user) {
@@ -69,6 +95,10 @@ export class UserRepository {
 		}
 
 		return user;
+	}
+
+	async softDeleteById(id: string): Promise<User> {
+		return await this.updateById(id, { deletedAt: new Date() });
 	}
 
 	async transaction<T>(

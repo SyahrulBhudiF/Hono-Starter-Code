@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import crypto from "node:crypto";
 
 export function generateOTP(length: number = 6): string {
@@ -10,4 +11,15 @@ export function generateOTP(length: number = 6): string {
 	}
 
 	return otp;
+}
+
+export function isOTPMatch(input: string, stored: string): boolean {
+	const inputBuffer = Buffer.from(input, "utf8");
+	const storedBuffer = Buffer.from(stored, "utf8");
+
+	if (inputBuffer.length !== storedBuffer.length) {
+		return false;
+	}
+
+	return crypto.timingSafeEqual(inputBuffer, storedBuffer);
 }

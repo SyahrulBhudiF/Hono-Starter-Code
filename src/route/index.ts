@@ -9,11 +9,14 @@ api.openAPIRegistry.registerComponent("securitySchemes", "BearerAuth", {
 	type: "http",
 	scheme: "bearer",
 	bearerFormat: "JWT",
-	description: "Masukkan access token tanpa prefix Bearer",
+	description: "Access token without the Bearer prefix",
 });
 
+api.use("/auth/register", rateLimit(10, 60));
 api.use("/auth/login", rateLimit(10, 60));
 api.use("/auth/send-otp", rateLimit(5, 60));
+api.use("/auth/verify-otp", rateLimit(10, 60));
+api.use("/auth/reset-password", rateLimit(5, 60));
 api.use("/auth/refresh-token", rateLimit(20, 60));
 api.route("/auth", authController);
 api.route("/", userController);

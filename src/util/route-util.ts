@@ -53,6 +53,10 @@ export const createResponses = (responseSchema: ZodType) => ({
 		description: "Not Found",
 		content: errorContent(404, "Resource not found"),
 	},
+	429: {
+		description: "Too Many Requests",
+		content: errorContent(429, "Too many requests"),
+	},
 	500: {
 		description: "Internal Server Error",
 		content: errorContent(500, "Internal server error"),

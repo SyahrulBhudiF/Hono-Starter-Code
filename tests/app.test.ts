@@ -7,20 +7,17 @@ vi.mock("../src/config/redis", () => ({
 		incr: vi.fn().mockResolvedValue(1),
 		ttl: vi.fn().mockResolvedValue(60),
 	},
+	pingRedis: vi.fn().mockResolvedValue(true),
+	closeRedis: vi.fn(),
+}));
+
+vi.mock("../src/config/db", () => ({
+	db: {},
+	pingDatabase: vi.fn().mockResolvedValue(true),
+	closeDatabase: vi.fn(),
 }));
 
 const loadApp = async () => {
-	process.env.DATABASE_URL ??=
-		"postgres://postgres:postgres@localhost:5432/test";
-	process.env.REDIS_HOST ??= "localhost";
-	process.env.REDIS_PORT ??= "6379";
-	process.env.JWT_ACCESS_SECRET ??= "test-access-secret";
-	process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret";
-	process.env.ACCESS_TOKEN_EXPIRES_IN ??= "1";
-	process.env.REFRESH_TOKEN_EXPIRES_IN ??= "7";
-	process.env.GOOGLE_CLIENT_ID ??= "test-google-client";
-	process.env.GOOGLE_CLIENT_SECRET ??= "test-google-secret";
-
 	const { createApp } = await import("../src/app");
 	return createApp();
 };
@@ -47,6 +44,30 @@ describe("app", () => {
 		expect(root.headers.get("x-request-id")).toBeTruthy();
 		expect(document.paths["/api/v1/auth/login"]).toBeDefined();
 		expect(await scalar.text()).toContain("Hono Starter API Reference");
+	});
+
+	test("no longer exposes the Swagger UI route", async () => {
+		expect((await app.request("/ui")).status).toBe(404);
+	});
+
+	test("reports dependency health", async () => {
+		const response = await app.request("/health");
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({
+			status: "ok",
+			checks: { database: true, redis: true },
+		});
+	});
+
+	test("reports a degraded status when a dependency is down", async () => {
+		const { pingRedis } = await import("../src/config/redis");
+		vi.mocked(pingRedis).mockResolvedValueOnce(false);
+
+		const response = await app.request("/health");
+
+		expect(response.status).toBe(503);
+		expect(await response.json()).toMatchObject({ status: "degraded" });
 	});
 
 	test("rejects invalid validated requests before the service runs", async () => {

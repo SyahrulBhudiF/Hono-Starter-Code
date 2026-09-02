@@ -1,10 +1,21 @@
 import Queue from "bull";
-import { requireEnv } from "../util/util";
+import { env } from "./env";
 
-export const emailQueue = new Queue("emailQueue", {
+export type EmailJob = {
+	email: string;
+	otp: string;
+};
+
+export const emailQueue = new Queue<EmailJob>("emailQueue", {
 	redis: {
-		host: requireEnv("REDIS_HOST"),
-		port: requireEnv<number>("REDIS_PORT"),
-		password: requireEnv("REDIS_PASSWORD", ["REDIS_PASSWORD"]) || undefined,
+		host: env.REDIS_HOST,
+		port: env.REDIS_PORT,
+		password: env.REDIS_PASSWORD,
+	},
+	defaultJobOptions: {
+		attempts: 3,
+		backoff: { type: "exponential", delay: 5000 },
+		removeOnComplete: true,
+		removeOnFail: 100,
 	},
 });

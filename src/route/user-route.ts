@@ -3,7 +3,7 @@ import { createResponses, jsonBody } from "../util/route-util";
 import { UserValidation } from "../validation/user-validation";
 
 const userResponse = z.object({
-	status: z.string(),
+	status: z.number(),
 	message: z.string(),
 	data: z.object({
 		email: z.email(),
@@ -38,7 +38,7 @@ export const changePasswordRoute = createRoute({
 	request: jsonBody(UserValidation.CHANGE_PASSWORD),
 	responses: createResponses(
 		z.object({
-			status: z.string(),
+			status: z.number(),
 			message: z.string(),
 			data: z.null(),
 		}),

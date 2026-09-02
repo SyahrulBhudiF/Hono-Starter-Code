@@ -1,43 +1,36 @@
 import { sign } from "hono/jwt";
 import type { User } from "../config/db/schema";
-import { requireEnv } from "./util";
-
-const ACCESS_TOKEN_EXPIRES_IN = parseInt(
-	requireEnv("ACCESS_TOKEN_EXPIRES_IN"),
-	10,
-);
-const REFRESH_TOKEN_EXPIRES_IN = parseInt(
-	requireEnv("REFRESH_TOKEN_EXPIRES_IN"),
-	10,
-);
-const JWT_ACCESS_SECRET = requireEnv("JWT_ACCESS_SECRET");
-const JWT_REFRESH_SECRET = requireEnv("JWT_REFRESH_SECRET");
+import { env } from "../config/env";
 
 export async function generateAccessToken(user: User): Promise<string> {
+	const issuedAt = Math.floor(Date.now() / 1000);
+
 	return await sign(
 		{
 			id: user.id,
 			name: user.name,
 			email: user.email,
 			role: user.role,
-			iat: Math.floor(Date.now() / 1000),
-			exp: Math.floor(Date.now() / 1000) + 60 * 60 * ACCESS_TOKEN_EXPIRES_IN,
+			jti: crypto.randomUUID(),
+			iat: issuedAt,
+			exp: issuedAt + 60 * 60 * env.ACCESS_TOKEN_EXPIRES_IN,
 		},
-		JWT_ACCESS_SECRET,
+		env.JWT_ACCESS_SECRET,
 		"HS256",
 	);
 }
 
 export async function generateRefreshToken(user: User): Promise<string> {
+	const issuedAt = Math.floor(Date.now() / 1000);
+
 	return await sign(
 		{
 			id: user.id,
 			jti: crypto.randomUUID(),
-			iat: Math.floor(Date.now() / 1000),
-			exp:
-				Math.floor(Date.now() / 1000) + 60 * 60 * 24 * REFRESH_TOKEN_EXPIRES_IN,
+			iat: issuedAt,
+			exp: issuedAt + 60 * 60 * 24 * env.REFRESH_TOKEN_EXPIRES_IN,
 		},
-		JWT_REFRESH_SECRET,
+		env.JWT_REFRESH_SECRET,
 		"HS256",
 	);
 }

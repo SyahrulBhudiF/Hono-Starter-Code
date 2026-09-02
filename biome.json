@@ -38,20 +38,5 @@
 				"organizeImports": "on"
 			}
 		}
-	},
-	"overrides": [
-		{
-			"includes": ["**/*.ts"],
-			"linter": {
-				"rules": {
-					"complexity": {
-						"noStaticOnlyClass": "off"
-					},
-					"suspicious": {
-						"noExplicitAny": "off"
-					}
-				}
-			}
-		}
-	]
+	}
 }

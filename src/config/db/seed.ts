@@ -1,16 +1,17 @@
 import { faker } from "@faker-js/faker";
 import { password } from "bun";
 import { reset } from "drizzle-seed";
+import { logger } from "../logging";
 import { db } from "./index";
 import * as schema from "./schema";
-import { usersTable } from "./schema";
+import { type NewUser, usersTable } from "./schema";
 
 async function seed() {
-	console.log("🔄 Seeding users...");
+	logger.info("Seeding users");
 
 	await reset(db, schema);
 
-	const users = Array.from({ length: 10 }, () => ({
+	const users: NewUser[] = Array.from({ length: 10 }, () => ({
 		name: faker.person.fullName(),
 		email: faker.internet.email().toLowerCase(),
 		password: password.hashSync("admin11", "bcrypt"),
@@ -28,11 +29,12 @@ async function seed() {
 
 	await db.insert(usersTable).values(users);
 
-	console.log("✅ Seeding completed");
-	process.exit(0);
+	logger.info("Seeding completed");
 }
 
-seed().catch((err) => {
-	console.error("❌ Seeding failed:", err);
-	process.exit(1);
-});
+seed()
+	.then(() => process.exit(0))
+	.catch((error) => {
+		logger.error(`Seeding failed: ${error}`);
+		process.exit(1);
+	});

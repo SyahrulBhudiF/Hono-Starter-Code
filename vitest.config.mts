@@ -10,13 +10,17 @@ export default defineConfig({
 	},
 	test: {
 		include: ["tests/**/*.test.ts"],
-		exclude: ["test/**", "node_modules/**"],
+		exclude: ["node_modules/**"],
+		setupFiles: ["./tests/setup-env.ts"],
 		coverage: {
 			provider: "v8",
 			include: [
 				"src/util/**/*.ts",
 				"src/validation/**/*.ts",
 				"src/model/**/*.ts",
+				"src/service/**/*.ts",
+				"src/middleware/**/*.ts",
+				"src/repository/**/*.ts",
 			],
 			exclude: ["src/model/app-model.ts"],
 			thresholds: {

@@ -1,11 +1,14 @@
 import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { verify } from "hono/jwt";
-import type { JWTPayload } from "hono/utils/jwt/types";
-import type { User } from "../config/db/schema";
-import redis from "../config/redis";
 import type { ApplicationVariables } from "../model/app-model";
 import { userRepository } from "../repository/user-repository";
+import {
+	getTokenId,
+	getTokenSubject,
+	isTokenBlacklisted,
+} from "../util/token-util";
+import { cacheUser, readCachedUser } from "../util/user-cache";
 
 export const authMiddleware = (
 	secret: string,
@@ -13,38 +16,35 @@ export const authMiddleware = (
 ): MiddlewareHandler<{ Variables: ApplicationVariables }> => {
 	return async (c, next) => {
 		const authHeader = c.req.header("Authorization");
+
 		if (!authHeader?.startsWith("Bearer ")) {
 			throw new HTTPException(401, { message: "Unauthorized" });
 		}
 
-		const token = authHeader.split(" ")[1];
-		const isBlacklisted = await redis.exists(`blacklist:${token}`);
+		const token = authHeader.slice("Bearer ".length).trim();
 
-		if (isBlacklisted) {
+		if (!token) {
+			throw new HTTPException(401, { message: "Unauthorized" });
+		}
+
+		const payload = await verify(token, secret, "HS256");
+		const tokenId = getTokenId(payload);
+
+		if (await isTokenBlacklisted(tokenId)) {
 			throw new HTTPException(401, { message: "Token has been invalidated" });
 		}
 
-		const jwtPayload: JWTPayload = await verify(token, secret, "HS256");
-		const userRedis = await redis.get(`user:${jwtPayload.id}`);
-
-		let user: User | null;
-
-		if (userRedis) {
-			user = JSON.parse(userRedis);
-		} else {
-			user = await userRepository.findById(jwtPayload.id as string);
-		}
+		const userId = getTokenSubject(payload);
+		const cachedUser = await readCachedUser(userId);
+		const user = cachedUser ?? (await userRepository.findById(userId));
 
 		if (!user) {
 			throw new HTTPException(404, { message: "User not found" });
 		}
 
-		await redis.set(
-			`user:${jwtPayload.id}`,
-			JSON.stringify(user),
-			"EX",
-			3 * 60 * 60,
-		);
+		if (!cachedUser) {
+			await cacheUser(user);
+		}
 
 		if (role && role !== user.role) {
 			throw new HTTPException(403, { message: "Forbidden" });

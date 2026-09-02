@@ -3,12 +3,12 @@ import { emailQueue } from "../config/queue";
 import { userRepository } from "../repository/user-repository";
 import { OtpService } from "./otp-service";
 
-export class EmailService {
-	static async sendOTP(email: string): Promise<void> {
+export const EmailService = {
+	async sendOTP(email: string): Promise<void> {
 		const user = await userRepository.findByEmail(email);
 
 		if (!user) {
-			logger.info(`OTP skipped for unknown email ${email}`);
+			logger.info("OTP request skipped for an unknown email");
 			return;
 		}
 
@@ -16,6 +16,6 @@ export class EmailService {
 
 		await emailQueue.add({ email, otp });
 
-		logger.info(`OTP job added to queue for ${email}`);
-	}
-}
+		logger.info("OTP job queued");
+	},
+};

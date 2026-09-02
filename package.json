@@ -2,6 +2,7 @@
 	"name": "Hono-Starter-Code",
 	"scripts": {
 		"dev": "bun run --hot src/index.ts",
+		"start": "bun run src/index.ts",
 		"seed": "bun run src/config/db/seed.ts",
 		"migrate": "bunx drizzle-kit generate && bunx drizzle-kit migrate",
 		"worker": "bun run src/worker.ts",
@@ -13,12 +14,12 @@
 		"check:fix": "bunx biome check --write .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"coverage": "vitest run --coverage"
+		"coverage": "vitest run --coverage",
+		"typecheck": "bunx tsc --noEmit"
 	},
 	"dependencies": {
 		"@faker-js/faker": "^10.5.0",
 		"@hono/oauth-providers": "^0.8.7",
-		"@hono/swagger-ui": "^0.6.1",
 		"@hono/zod-openapi": "^1.5.1",
 		"@scalar/hono-api-reference": "^0.11.12",
 		"@types/nodemailer": "^8.0.1",
@@ -30,7 +31,6 @@
 		"ioredis": "^6.0.0",
 		"nodemailer": "^9.0.4",
 		"pg": "^8.22.0",
-		"swagger-ui-dist": "^5.32.12",
 		"winston": "^3.19.0",
 		"zod": "^4.4.3"
 	},

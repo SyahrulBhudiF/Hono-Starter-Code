@@ -77,7 +77,6 @@ Keep changes small and scoped. Update docs when behavior, setup, routes, or scri
 - Use controllers only for HTTP request/response handling.
 - Put business logic in `src/service`.
 - Put Drizzle queries in concrete repositories under `src/repository`.
-- Do not add new code that imports the deprecated generic repository in `src/types/repository.ts`.
 - Put request schemas in `src/validation`.
 - Use `@hono/zod-openapi` schemas for OpenAPI routes.
 - Prefer `app.request()` for integration tests.
@@ -88,8 +87,8 @@ Run:
 
 ```bash
 bun run check
-bunx tsc --noEmit
-bun test
+bun run typecheck
+bun run coverage
 ```
 
 Auto-fix formatting/lint issues:
@@ -101,13 +100,14 @@ bun run check:fix
 ## Testing
 
 ```bash
-bun test
-bun run test:unit
-bun run test:integration
+bun run test
+bun run coverage
 ```
 
-Unit tests live in `test/unit`.
-Integration tests live in `test/integration` and should use Hono `app.request()` when possible.
+Tests live in `tests/` and run on Vitest. Integration tests should use Hono
+`app.request()` when possible. Coverage thresholds are enforced at 80% for
+`src/util`, `src/validation`, `src/model`, `src/service`, `src/middleware`, and
+`src/repository`.
 
 ## Pull request process
 
@@ -129,6 +129,8 @@ Integration tests live in `test/integration` and should use Hono `app.request()`
 - Avoid unsafe casts unless there is no practical alternative.
 - Let Drizzle schema/types guide DB code.
 - Keep OpenAPI docs in sync with handlers.
+- Read configuration through `src/config/env.ts`, not `process.env`.
+- Invalidate the cached user with `invalidateUserCache` after any user write.
 
 ## Commit messages
 
